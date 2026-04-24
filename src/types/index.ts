@@ -56,6 +56,24 @@ export interface GroupInviteNotification {
   invited_by_docente_username: string;
 }
 
+export interface GroupStudent {
+  participant_id: number;
+  usuario_id: number;
+  nombre: string;
+  username: string;
+  github_username?: string | null;
+  fecha_inicio: string;
+  fecha_fin?: string | null;
+}
+
+export interface GroupStudentCandidate {
+  participant_id: number;
+  usuario_id: number;
+  nombre: string;
+  username: string;
+  github_username?: string | null;
+}
+
 export interface Participant {
   id: number;
   usuario_id: number;
@@ -63,12 +81,54 @@ export interface Participant {
   activo: boolean;
 }
 
-export interface RankingItem {
+export interface ParticipantQuickResult {
+  participant_id: number;
   usuario_id: number;
   nombre: string;
-  grupo: string;
-  puntos_commits: number;
-  puntos_docente: number;
-  puntos_proyecto: number;
+  username: string;
+  github_username?: string | null;
+  grupo_id: number;
+}
+
+export interface CommitListItem {
+  sha: string;
+  mensaje: string;
+  fecha: string;
+  url: string;
+  puntos: number;
+  repo: string;
+  owner: string;
+}
+
+export interface CommitListResponse {
+  usuario_id: number;
   total: number;
+  items: CommitListItem[];
+}
+
+export interface GithubSyncResponse {
+  message: string;
+  usuario_id: number;
+  github_username: string;
+  repos_nuevos: number;
+  commits_nuevos: number;
+  since: string;
+}
+
+export interface GroupRankingItem {
+  rank: number;
+  usuario_id: number;
+  nombre: string;
+  github_username?: string | null;
+  commits_count: number;
+  commits_points: number;
+  docente_grade: number;
+  proyecto_grade: number;
+  promedio: number;
+}
+
+export interface GroupRankingGradesUpdatePayload {
+  usuario_id: number;
+  docente_grade?: number;
+  proyecto_grade?: number;
 }
