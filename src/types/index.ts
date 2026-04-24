@@ -112,6 +112,7 @@ export interface GithubSyncResponse {
   github_username: string;
   repos_nuevos: number;
   commits_nuevos: number;
+  contribuciones_totales?: number | null;
   since: string;
 }
 
@@ -131,4 +132,20 @@ export interface GroupRankingGradesUpdatePayload {
   usuario_id: number;
   docente_grade?: number;
   proyecto_grade?: number;
+}
+
+export interface GeneralRankingItem {
+  rank: number;
+  group_id: number;
+  group_name: string;
+  usuario_id: number;
+  nombre: string;
+  github_username?: string | null;
+  commits_count: number;
+  contributions_count: number;
+  metric_value: number;
+  metric_points: number;
+  docente_grade: number;
+  proyecto_grade: number;
+  total_score: number;
 }

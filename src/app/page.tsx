@@ -1,36 +1,36 @@
 import Link from "next/link";
 
 const metrics = [
-  { label: "Sincronizacion GitHub", value: "365 dias", note: "ventana historica consolidada" },
-  { label: "Calculo compuesto", value: "500 pts", note: "commits + docente + proyecto" },
-  { label: "Filtros academicos", value: "4 capas", note: "grupo, carrera, semestre y docente" },
+  { label: "Sincronizacion GitHub", value: "Historial flexible", note: "sincroniza actividad real segun la ventana configurada" },
+  { label: "Compartir grupos", value: "1 clic", note: "por link corto o invitacion entre docentes" },
+  { label: "Ranking docente", value: "100 pts", note: "commits, criterio docente y proyecto en una sola tabla" },
 ];
 
 const modules = [
   {
-    href: "/registro",
-    label: "Alta de usuario",
-    title: "Registra tu cuenta con nombre, usuario y contrasena segura.",
-  },
-  {
-    href: "/admin",
-    label: "Control academico",
-    title: "Administra alumnos, grupos y repositorios desde un solo panel.",
+    href: "/docente",
+    label: "Cursos y grupos",
+    title: "Crea cursos, edita grupos y administra su estructura desde un solo panel docente.",
   },
   {
     href: "/docente",
-    label: "Evaluacion docente",
-    title: "Captura criterio academico y pondera impacto real del proyecto.",
+    label: "Participantes",
+    title: "Da de alta participantes con nombre, grupo y GitHub sin procesos innecesarios.",
   },
   {
-    href: "/ranking",
-    label: "Ranking vivo",
-    title: "Visualiza lideres, desglose de puntos y segmentos por cohorte.",
+    href: "/docente",
+    label: "Sincronizacion GitHub",
+    title: "Trae commits reales desde GitHub y actualiza el ranking del grupo sin salir del panel.",
+  },
+  {
+    href: "/docente",
+    label: "Compartir entre docentes",
+    title: "Comparte grupos por invitacion o link corto y recibe notificaciones dentro del panel.",
   },
   {
     href: "/login",
-    label: "Acceso seguro",
-    title: "Autenticacion JWT preparada para roles administrativos y academicos.",
+    label: "Acceso al panel",
+    title: "Entra al panel docente para ver ranking, alumnos, commits y evaluaciones en contexto.",
   },
 ];
 
@@ -48,15 +48,15 @@ export default function Home() {
             </span>
             <div>
               <p className="font-semibold text-white">Ranking Commits</p>
-              <p className="text-xs uppercase tracking-[0.24em] text-[color:var(--muted)]">Plataforma mexicana para talento academico</p>
+              <p className="text-xs uppercase tracking-[0.24em] text-[color:var(--muted)]">Inteligencia academica para evidencia tecnica, seguimiento docente y colaboracion entre grupos</p>
             </div>
           </div>
           <div className="hidden items-center gap-3 md:flex">
-            <Link href="/registro" className="text-[color:var(--muted)] transition hover:text-white">
-              Registrarme
+            <Link href="/" className="text-[color:var(--muted)] transition hover:text-white">
+              Inicio
             </Link>
-            <Link href="/ranking" className="text-[color:var(--muted)] transition hover:text-white">
-              Ver ranking
+            <Link href="/login" className="text-[color:var(--muted)] transition hover:text-white">
+              Acceso
             </Link>
             <Link
               href="/login"
@@ -70,33 +70,21 @@ export default function Home() {
         <section className="grid gap-6 lg:grid-cols-[1.25fr_0.75fr]">
           <div className="glass-panel rounded-[2rem] p-8 lg:p-10">
             <div className="mb-6 inline-flex rounded-full border border-[color:var(--accent)]/20 bg-[color:var(--accent)]/10 px-4 py-2 font-mono text-xs uppercase tracking-[0.28em] text-[color:var(--accent)]">
-              Hecho para universidades en Mexico
+              Seguimiento academico conectado con GitHub
             </div>
             <h1 className="max-w-3xl text-balance text-5xl font-semibold leading-[1.02] tracking-[-0.04em] text-white lg:text-7xl">
-              Convierte actividad en GitHub en un ranking academico que se siente serio, medible y vendible.
+              Gestiona grupos, participantes y ranking docente desde una sola vista que si corresponde a tu flujo real.
             </h1>
             <p className="mt-6 max-w-2xl text-lg leading-8 text-[color:var(--muted)] lg:text-xl">
-              Une evidencia tecnica, criterio docente e impacto de proyecto en una plataforma que prioriza consistencia,
-              trazabilidad y narrativa institucional.
+              Crea cursos, agrega participantes, sincroniza commits desde GitHub, comparte grupos con otros docentes y
+              calcula el ranking con puntos por commits, calificacion del maestro y calificacion del proyecto.
             </p>
             <div className="mt-10 flex flex-col gap-4 sm:flex-row">
               <Link
-                href="/registro"
+                href="/login"
                 className="inline-flex items-center justify-center rounded-full bg-[color:var(--warm)] px-6 py-3 font-medium text-slate-950 transition hover:bg-[#ffbe4a]"
               >
-                Crear cuenta
-              </Link>
-              <Link
-                href="/login"
-                className="inline-flex items-center justify-center rounded-full bg-[color:var(--accent)] px-6 py-3 font-medium text-slate-950 transition hover:bg-[color:var(--accent-strong)]"
-              >
-                Iniciar sesion
-              </Link>
-              <Link
-                href="/admin"
-                className="inline-flex items-center justify-center rounded-full border border-white/12 bg-white/5 px-6 py-3 font-medium text-white transition hover:bg-white/10"
-              >
-                Ver panel administrativo
+                Entrar al panel
               </Link>
             </div>
           </div>

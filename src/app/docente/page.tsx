@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { DashboardShell } from "@/components/layout/dashboard-shell";
-import { readAuthSession } from "@/features/auth/session";
+import { clearAuthSession, readAuthSession } from "@/features/auth/session";
 import { ApiError, apiDelete, apiGet, apiPost, apiPut } from "@/lib/api";
 import type {
   Group,
+  GeneralRankingItem,
   GroupInviteCreatedResponse,
   GroupInviteNotification,
   CommitListItem,
@@ -73,6 +74,8 @@ export default function DocentePage() {
   const [isHydrated, setIsHydrated] = useState(false);
   const [accessToken, setAccessToken] = useState<string | undefined>(undefined);
   const [activeModal, setActiveModal] = useState<ActiveModal>(null);
+  const [editingGroup, setEditingGroup] = useState<Group | null>(null);
+  const [cardMenuGroupId, setCardMenuGroupId] = useState<number | null>(null);
   const [groupForm, setGroupForm] = useState(initialGroupForm);
   const [studentForm, setStudentForm] = useState(initialStudentForm);
   const [isSubmittingGroup, setIsSubmittingGroup] = useState(false);
@@ -106,8 +109,14 @@ export default function DocentePage() {
   const [isSyncingMemberCommits, setIsSyncingMemberCommits] = useState(false);
   const [rankingModal, setRankingModal] = useState<GroupRankingModalState>(null);
   const [rankingItems, setRankingItems] = useState<GroupRankingItem[]>([]);
+  const [generalRankingItems, setGeneralRankingItems] = useState<GeneralRankingItem[]>([]);
+  const [generalRankingMetric, setGeneralRankingMetric] = useState<"todo" | "commits" | "contribuciones">("todo");
+  const [generalRankingPeriod, setGeneralRankingPeriod] = useState<"7d" | "30d" | "90d" | "1y" | "all" | "custom">("1y");
+  const [generalRankingFromDate, setGeneralRankingFromDate] = useState("");
+  const [generalRankingToDate, setGeneralRankingToDate] = useState("");
   const [rankingDrafts, setRankingDrafts] = useState<RankingDraftMap>({});
   const [isLoadingRanking, setIsLoadingRanking] = useState(false);
+  const [isLoadingGeneralRanking, setIsLoadingGeneralRanking] = useState(false);
   const [isRefreshingRanking, setIsRefreshingRanking] = useState(false);
   const [isSavingRankingGrades, setIsSavingRankingGrades] = useState<number | null>(null);
   const [groupSearch, setGroupSearch] = useState("");
@@ -127,17 +136,75 @@ export default function DocentePage() {
     };
   }, []);
 
+  useEffect(() => {
+    function handleEscapeKey(event: KeyboardEvent) {
+      if (event.key !== "Escape") {
+        return;
+      }
+
+      if (shareModal) {
+        setShareModal(null);
+        return;
+      }
+      if (rankingModal) {
+        setRankingModal(null);
+        return;
+      }
+      if (memberCommitsModal) {
+        setMemberCommitsModal(null);
+        return;
+      }
+      if (membersModal) {
+        setMembersModal(null);
+        return;
+      }
+      if (successModal) {
+        setSuccessModal(null);
+        return;
+      }
+      if (isNotificationsOpen) {
+        setIsNotificationsOpen(false);
+        return;
+      }
+      if (activeModal) {
+        setActiveModal(null);
+        setEditingGroup(null);
+        setGroupForm(initialGroupForm);
+        return;
+      }
+      if (cardMenuGroupId !== null) {
+        setCardMenuGroupId(null);
+      }
+    }
+
+    window.addEventListener("keydown", handleEscapeKey);
+    return () => {
+      window.removeEventListener("keydown", handleEscapeKey);
+    };
+  }, [activeModal, cardMenuGroupId, isNotificationsOpen, memberCommitsModal, membersModal, rankingModal, shareModal, successModal]);
+
   const availableCarreras = Array.from(new Set(groups.map((group) => group.carrera))).sort((a, b) => a.localeCompare(b));
   const availableSemestres = Array.from(new Set(groups.map((group) => group.semestre))).sort((a, b) => a - b);
 
-  const filteredGroups = groups.filter((group) => {
-    const matchesSearch =
-      group.nombre.toLowerCase().includes(groupSearch.trim().toLowerCase()) ||
-      group.carrera.toLowerCase().includes(groupSearch.trim().toLowerCase());
-    const matchesCarrera = filterCarrera === "all" || group.carrera === filterCarrera;
-    const matchesSemestre = filterSemestre === "all" || String(group.semestre) === filterSemestre;
-    return matchesSearch && matchesCarrera && matchesSemestre;
-  });
+  const filteredGroups = useMemo(
+    () =>
+      groups.filter((group) => {
+        const matchesSearch =
+          group.nombre.toLowerCase().includes(groupSearch.trim().toLowerCase()) ||
+          group.carrera.toLowerCase().includes(groupSearch.trim().toLowerCase());
+        const matchesCarrera = filterCarrera === "all" || group.carrera === filterCarrera;
+        const matchesSemestre = filterSemestre === "all" || String(group.semestre) === filterSemestre;
+        return matchesSearch && matchesCarrera && matchesSemestre;
+      }),
+    [filterCarrera, filterSemestre, groupSearch, groups],
+  );
+  const filteredGroupIdsKey = filteredGroups.map((group) => group.id).join(",");
+  const generalMetricLabel =
+    generalRankingMetric === "commits"
+      ? "Commits"
+      : generalRankingMetric === "contribuciones"
+        ? "Contribuciones GitHub"
+        : "Actividad";
 
   useEffect(() => {
     async function loadDocenteGroups() {
@@ -182,10 +249,61 @@ export default function DocentePage() {
     void loadInviteNotifications();
   }, [accessToken]);
 
-  async function handleCreateGroup(event: React.FormEvent<HTMLFormElement>) {
+  useEffect(() => {
+    async function loadGeneralRanking() {
+      if (!accessToken) {
+        setGeneralRankingItems([]);
+        setIsLoadingGeneralRanking(false);
+        return;
+      }
+
+      if (filteredGroups.length === 0) {
+        setGeneralRankingItems([]);
+        setIsLoadingGeneralRanking(false);
+        return;
+      }
+
+      setIsLoadingGeneralRanking(true);
+      try {
+        const params = new URLSearchParams({
+          metric: generalRankingMetric,
+          period: generalRankingPeriod,
+          group_ids: filteredGroupIdsKey,
+        });
+        if (generalRankingPeriod === "custom") {
+          if (!generalRankingFromDate || !generalRankingToDate) {
+            setGeneralRankingItems([]);
+            setIsLoadingGeneralRanking(false);
+            return;
+          }
+          params.set("from_date", generalRankingFromDate);
+          params.set("to_date", generalRankingToDate);
+        }
+
+        const items = await apiGet<GeneralRankingItem[]>(`/ranking/general?${params.toString()}`, accessToken);
+        setGeneralRankingItems(items);
+      } catch {
+        setGeneralRankingItems([]);
+      } finally {
+        setIsLoadingGeneralRanking(false);
+      }
+    }
+
+    void loadGeneralRanking();
+  }, [
+    accessToken,
+    filteredGroupIdsKey,
+    filteredGroups,
+    generalRankingFromDate,
+    generalRankingMetric,
+    generalRankingPeriod,
+    generalRankingToDate,
+  ]);
+
+  async function handleSubmitGroup(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setIsSubmittingGroup(true);
-    setFeedback("Creando grupo...");
+    setFeedback(editingGroup ? "Actualizando grupo..." : "Creando grupo...");
 
     try {
       if (!accessToken) {
@@ -193,27 +311,54 @@ export default function DocentePage() {
         return;
       }
 
-      const createdGroup = await apiPost<Group>(
-        "/grupos",
-        {
-          ...groupForm,
-          semestre: Number(groupForm.semestre),
-        },
-        accessToken,
-      );
-      setGroups((current) => [createdGroup, ...current]);
-      setFeedback(`Grupo ${createdGroup.nombre} creado correctamente.`);
-      setSuccessModal({
-        title: "Grupo creado",
-        message: `El grupo ${createdGroup.nombre} se registro correctamente con semestre ${createdGroup.semestre}.`,
-      });
+      const payload = {
+        ...groupForm,
+        semestre: Number(groupForm.semestre),
+      };
+
+      if (editingGroup) {
+        const updatedGroup = await apiPut<Group>(`/grupos/${editingGroup.id}`, payload, accessToken);
+        setGroups((current) => current.map((group) => (group.id === updatedGroup.id ? updatedGroup : group)));
+        setFeedback(`Grupo ${updatedGroup.nombre} actualizado correctamente.`);
+        setSuccessModal({
+          title: "Grupo actualizado",
+          message: `El grupo ${updatedGroup.nombre} se actualizo correctamente.`,
+        });
+      } else {
+        const createdGroup = await apiPost<Group>("/grupos", payload, accessToken);
+        setGroups((current) => [createdGroup, ...current]);
+        setFeedback(`Grupo ${createdGroup.nombre} creado correctamente.`);
+        setSuccessModal({
+          title: "Grupo creado",
+          message: `El grupo ${createdGroup.nombre} se registro correctamente con semestre ${createdGroup.semestre}.`,
+        });
+      }
+
       setGroupForm(initialGroupForm);
+      setEditingGroup(null);
       setActiveModal(null);
     } catch (error) {
-      setFeedback(error instanceof ApiError ? error.detail : "No se pudo crear el grupo.");
+      setFeedback(error instanceof ApiError ? error.detail : "No se pudo guardar el grupo.");
     } finally {
       setIsSubmittingGroup(false);
     }
+  }
+
+  function openGroupCreateModal() {
+    setEditingGroup(null);
+    setGroupForm(initialGroupForm);
+    setActiveModal("group");
+  }
+
+  function openGroupEditModal(group: Group) {
+    setEditingGroup(group);
+    setGroupForm({
+      nombre: group.nombre,
+      carrera: group.carrera,
+      semestre: String(group.semestre),
+    });
+    setCardMenuGroupId(null);
+    setActiveModal("group");
   }
 
   async function handleCreateParticipant(event: React.FormEvent<HTMLFormElement>) {
@@ -657,8 +802,24 @@ export default function DocentePage() {
     setGeneratedShareLink("");
   }
 
+  function handleGoHome() {
+    window.location.href = "/";
+  }
+
+  function handleLogout() {
+    clearAuthSession();
+    window.location.href = "/login";
+  }
+
   const docenteHeaderActions = (
     <>
+      <button
+        type="button"
+        className="rounded-full border border-white/10 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition hover:border-[color:var(--accent)]/35 hover:bg-white/10"
+        onClick={handleGoHome}
+      >
+        Regresar al inicio
+      </button>
       <button
         type="button"
         className="relative inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white transition hover:border-[color:var(--accent)]/35 hover:bg-white/10"
@@ -679,7 +840,7 @@ export default function DocentePage() {
       <button
         type="button"
         className="rounded-full bg-[color:var(--accent)] px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-[color:var(--accent-strong)]"
-        onClick={() => setActiveModal("group")}
+        onClick={() => openGroupCreateModal()}
       >
         Nuevo grupo
       </button>
@@ -689,6 +850,13 @@ export default function DocentePage() {
         onClick={() => setActiveModal("participant")}
       >
         Nuevo participante
+      </button>
+      <button
+        type="button"
+        className="rounded-full border border-red-400/20 bg-red-500/10 px-5 py-3 text-sm font-semibold text-red-100 transition hover:border-red-300/40 hover:bg-red-500/20"
+        onClick={handleLogout}
+      >
+        Salir
       </button>
     </>
   );
@@ -701,26 +869,6 @@ export default function DocentePage() {
         </section>
       ) : (
       <section className="glass-panel rounded-[1.5rem] p-5">
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-          <p className="text-sm font-semibold text-white">Aceptar invitacion</p>
-          <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_auto]">
-            <input
-              className="rounded-2xl border border-white/10 bg-white/6 px-4 py-3 text-white outline-none placeholder:text-slate-500 focus:border-[color:var(--accent)]/40"
-              placeholder="Pega link o codigo"
-              value={acceptShareToken}
-              onChange={(event) => setAcceptShareToken(event.target.value)}
-            />
-            <button
-              type="button"
-              className="rounded-full border border-white/15 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition hover:border-[color:var(--accent)]/50 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
-              onClick={() => void handleAcceptShareByLink()}
-              disabled={isAcceptingShare}
-            >
-              {isAcceptingShare ? "Aceptando..." : "Aceptar link"}
-            </button>
-          </div>
-        </div>
-
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h3 className="text-lg font-semibold text-white">Mis cursos</h3>
           <p className="text-sm text-[color:var(--muted)]">Total: {filteredGroups.length}</p>
@@ -778,9 +926,22 @@ export default function DocentePage() {
         ) : groupsViewMode === "cards" ? (
           <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {filteredGroups.map((group, index) => (
-              <article key={group.id} className="overflow-hidden rounded-2xl border border-white/10 bg-white/5">
+              <article
+                key={group.id}
+                className="relative cursor-pointer overflow-visible rounded-2xl border border-white/10 bg-white/5 transition hover:border-[color:var(--accent)]/35"
+                onClick={() => void openRankingModal(group)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    void openRankingModal(group);
+                  }
+                }}
+                aria-label={`Abrir ranking del grupo ${group.nombre}`}
+              >
                 <div
-                  className="h-20 w-full"
+                  className="h-20 w-full rounded-t-2xl"
                   style={{
                     background:
                       index % 3 === 0
@@ -795,28 +956,63 @@ export default function DocentePage() {
                   <p className="mt-1 text-sm text-[color:var(--muted)]">
                     {group.carrera} - Semestre {group.semestre}
                   </p>
-                  <div className="mt-4 flex gap-2">
-                    <button
-                      type="button"
-                      className="rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-semibold text-white transition hover:border-[color:var(--accent)]/50 hover:bg-white/10"
-                      onClick={() => void openMembersModal(group)}
-                    >
-                      Alumnos
-                    </button>
-                    <button
-                      type="button"
-                      className="rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-semibold text-white transition hover:border-[color:var(--accent)]/50 hover:bg-white/10"
-                      onClick={() => void openRankingModal(group)}
-                    >
-                      Ranking
-                    </button>
-                    <button
-                      type="button"
-                      className="rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-semibold text-white transition hover:border-[color:var(--accent)]/50 hover:bg-white/10"
-                      onClick={() => openShareModal(group)}
-                    >
-                      Compartir
-                    </button>
+                  <div className="mt-4 flex items-center justify-between gap-2">
+                    <span className="text-xs text-[color:var(--muted)]">Abrir ranking</span>
+                    <div className="relative">
+                      <button
+                        type="button"
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/15 bg-white/5 text-white transition hover:border-[color:var(--accent)]/50 hover:bg-white/10"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setCardMenuGroupId((current) => (current === group.id ? null : group.id));
+                        }}
+                        aria-label="Opciones"
+                        title="Opciones"
+                      >
+                        <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor">
+                          <circle cx="12" cy="5" r="2" />
+                          <circle cx="12" cy="12" r="2" />
+                          <circle cx="12" cy="19" r="2" />
+                        </svg>
+                      </button>
+
+                      {cardMenuGroupId === group.id ? (
+                        <div className="absolute bottom-10 right-0 z-30 w-44 overflow-hidden rounded-xl border border-white/10 bg-slate-900/95 shadow-xl backdrop-blur">
+                          <button
+                            type="button"
+                            className="block w-full px-4 py-2 text-left text-sm text-white transition hover:bg-white/10"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              openGroupEditModal(group);
+                            }}
+                          >
+                            Modificar grupo
+                          </button>
+                          <button
+                            type="button"
+                            className="block w-full px-4 py-2 text-left text-sm text-white transition hover:bg-white/10"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              setCardMenuGroupId(null);
+                              void openMembersModal(group);
+                            }}
+                          >
+                            Agregar alumnos
+                          </button>
+                          <button
+                            type="button"
+                            className="block w-full px-4 py-2 text-left text-sm text-white transition hover:bg-white/10"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              setCardMenuGroupId(null);
+                              openShareModal(group);
+                            }}
+                          >
+                            Compartir grupo
+                          </button>
+                        </div>
+                      ) : null}
+                    </div>
                   </div>
                 </div>
               </article>
@@ -870,6 +1066,106 @@ export default function DocentePage() {
             </table>
           </div>
         )}
+
+        <div className="mt-6 overflow-hidden rounded-2xl border border-white/10 bg-white/5">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 px-4 py-4">
+            <div>
+              <p className="text-sm font-semibold text-white">Ranking general de tus grupos</p>
+              <p className="mt-1 text-xs text-[color:var(--muted)]">Filtra por metrica y periodo usando solo los grupos visibles ahora.</p>
+            </div>
+            <p className="text-xs text-[color:var(--muted)]">Alumnos: {generalRankingItems.length}</p>
+          </div>
+
+          <div className="grid gap-3 border-b border-white/10 px-4 py-4 md:grid-cols-[0.9fr_0.9fr_0.9fr_0.9fr]">
+            <select
+              className="rounded-xl border border-white/10 bg-white/6 px-4 py-3 text-sm text-white outline-none focus:border-[color:var(--accent)]/40"
+              value={generalRankingMetric}
+              onChange={(event) => setGeneralRankingMetric(event.target.value as "todo" | "commits" | "contribuciones")}
+            >
+              <option value="todo" className="bg-slate-900 text-white">Todo</option>
+              <option value="commits" className="bg-slate-900 text-white">Commits</option>
+              <option value="contribuciones" className="bg-slate-900 text-white">Contribuciones GitHub</option>
+            </select>
+            <select
+              className="rounded-xl border border-white/10 bg-white/6 px-4 py-3 text-sm text-white outline-none focus:border-[color:var(--accent)]/40"
+              value={generalRankingPeriod}
+              onChange={(event) => setGeneralRankingPeriod(event.target.value as "7d" | "30d" | "90d" | "1y" | "all" | "custom")}
+            >
+              <option value="7d" className="bg-slate-900 text-white">Ultimos 7 dias</option>
+              <option value="30d" className="bg-slate-900 text-white">Ultimos 30 dias</option>
+              <option value="90d" className="bg-slate-900 text-white">Ultimos 90 dias</option>
+              <option value="1y" className="bg-slate-900 text-white">Ultimo anio</option>
+              <option value="all" className="bg-slate-900 text-white">Todo</option>
+              <option value="custom" className="bg-slate-900 text-white">Rango personalizado</option>
+            </select>
+            <input
+              type="date"
+              className="rounded-xl border border-white/10 bg-white/6 px-4 py-3 text-sm text-white outline-none focus:border-[color:var(--accent)]/40 disabled:opacity-40"
+              value={generalRankingFromDate}
+              onChange={(event) => setGeneralRankingFromDate(event.target.value)}
+              disabled={generalRankingPeriod !== "custom"}
+            />
+            <input
+              type="date"
+              className="rounded-xl border border-white/10 bg-white/6 px-4 py-3 text-sm text-white outline-none focus:border-[color:var(--accent)]/40 disabled:opacity-40"
+              value={generalRankingToDate}
+              onChange={(event) => setGeneralRankingToDate(event.target.value)}
+              disabled={generalRankingPeriod !== "custom"}
+            />
+          </div>
+
+          {isLoadingGeneralRanking ? (
+            <p className="px-4 py-4 text-sm text-[color:var(--muted)]">Cargando ranking general...</p>
+          ) : generalRankingItems.length === 0 ? (
+            <p className="px-4 py-4 text-sm text-[color:var(--muted)]">No hay alumnos suficientes para construir el ranking general.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b border-white/10 text-[color:var(--muted)]">
+                    <th className="px-4 py-3 font-medium">Ranking</th>
+                    <th className="px-4 py-3 font-medium">Alumno</th>
+                    <th className="px-4 py-3 font-medium">GitHub</th>
+                    <th className="px-4 py-3 font-medium">Grupo</th>
+                    <th className="px-4 py-3 font-medium">{generalMetricLabel}</th>
+                    <th className="px-4 py-3 font-medium">Puntos metrica</th>
+                    <th className="px-4 py-3 font-medium">Calif maestro</th>
+                    <th className="px-4 py-3 font-medium">Calif proyecto</th>
+                    <th className="px-4 py-3 font-medium">{generalRankingMetric === "todo" ? "Promedio" : "Score"}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {generalRankingItems.map((item) => (
+                    <tr key={`${item.group_id}-${item.usuario_id}`} className="border-b border-white/5 text-white/95 last:border-b-0">
+                      <td className="px-4 py-3">#{item.rank}</td>
+                      <td className="px-4 py-3">{item.nombre}</td>
+                      <td className="px-4 py-3">
+                        {item.github_username ? (
+                          <a
+                            className="text-[color:var(--accent)] hover:underline"
+                            href={`https://github.com/${item.github_username}`}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            @{item.github_username}
+                          </a>
+                        ) : (
+                          "-"
+                        )}
+                      </td>
+                      <td className="px-4 py-3">{item.group_name}</td>
+                      <td className="px-4 py-3">{item.metric_value}</td>
+                      <td className="px-4 py-3">{item.metric_points.toFixed(2)}</td>
+                      <td className="px-4 py-3">{item.docente_grade.toFixed(2)}</td>
+                      <td className="px-4 py-3">{item.proyecto_grade.toFixed(2)}</td>
+                      <td className="px-4 py-3 font-semibold">{item.total_score.toFixed(2)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       </section>
       )}
 
@@ -879,55 +1175,83 @@ export default function DocentePage() {
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="font-mono text-xs uppercase tracking-[0.24em] text-[color:var(--accent)]">
-                  {activeModal === "group" ? "Nuevo grupo" : "Nuevo participante"}
+                  {activeModal === "group" ? (editingGroup ? "Modificar grupo" : "Nuevo grupo") : "Nuevo participante"}
                 </p>
                 <h3 className="mt-2 text-2xl font-semibold text-white">
-                  {activeModal === "group" ? "Agregar grupo" : "Agregar participante"}
+                  {activeModal === "group" ? (editingGroup ? "Modificar grupo" : "Agregar grupo") : "Agregar participante"}
                 </h3>
               </div>
               <button
                 type="button"
                 className="rounded-full border border-white/10 px-3 py-1 text-sm text-[color:var(--muted)] transition hover:border-white/20 hover:text-white"
-                onClick={() => setActiveModal(null)}
+                onClick={() => {
+                  setActiveModal(null);
+                  setEditingGroup(null);
+                  setGroupForm(initialGroupForm);
+                }}
               >
                 Cerrar
               </button>
             </div>
 
             {activeModal === "group" ? (
-              <form className="mt-6 grid gap-4 sm:grid-cols-2" onSubmit={handleCreateGroup}>
-                <input
-                  className="rounded-2xl border border-white/10 bg-white/6 px-4 py-3 text-white outline-none placeholder:text-slate-500 focus:border-[color:var(--accent)]/40 sm:col-span-2"
-                  placeholder="Nombre del grupo"
-                  value={groupForm.nombre}
-                  onChange={(event) => setGroupForm((current) => ({ ...current, nombre: event.target.value }))}
-                  required
-                />
-                <input
-                  className="rounded-2xl border border-white/10 bg-white/6 px-4 py-3 text-white outline-none placeholder:text-slate-500 focus:border-[color:var(--accent)]/40"
-                  placeholder="Carrera"
-                  value={groupForm.carrera}
-                  onChange={(event) => setGroupForm((current) => ({ ...current, carrera: event.target.value }))}
-                  required
-                />
-                <input
-                  className="rounded-2xl border border-white/10 bg-white/6 px-4 py-3 text-white outline-none placeholder:text-slate-500 focus:border-[color:var(--accent)]/40"
-                  placeholder="Semestre"
-                  type="number"
-                  min="1"
-                  max="12"
-                  value={groupForm.semestre}
-                  onChange={(event) => setGroupForm((current) => ({ ...current, semestre: event.target.value }))}
-                  required
-                />
-                <button
-                  type="submit"
-                  disabled={isSubmittingGroup}
-                  className="sm:col-span-2 rounded-full bg-[color:var(--accent)] px-5 py-3 font-semibold text-slate-950 transition hover:bg-[color:var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-70"
-                >
-                  {isSubmittingGroup ? "Guardando grupo..." : "Guardar grupo"}
-                </button>
-              </form>
+              <div className="mt-6 space-y-5">
+                {!editingGroup ? (
+                  <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                    <p className="text-sm font-semibold text-white">Aceptar invitacion</p>
+                    <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_auto]">
+                      <input
+                        className="rounded-2xl border border-white/10 bg-white/6 px-4 py-3 text-white outline-none placeholder:text-slate-500 focus:border-[color:var(--accent)]/40"
+                        placeholder="Pega link o codigo"
+                        value={acceptShareToken}
+                        onChange={(event) => setAcceptShareToken(event.target.value)}
+                      />
+                      <button
+                        type="button"
+                        className="rounded-full border border-white/15 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition hover:border-[color:var(--accent)]/50 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+                        onClick={() => void handleAcceptShareByLink()}
+                        disabled={isAcceptingShare}
+                      >
+                        {isAcceptingShare ? "Aceptando..." : "Aceptar link"}
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
+
+                <form className="grid gap-4 sm:grid-cols-2" onSubmit={handleSubmitGroup}>
+                  <input
+                    className="rounded-2xl border border-white/10 bg-white/6 px-4 py-3 text-white outline-none placeholder:text-slate-500 focus:border-[color:var(--accent)]/40 sm:col-span-2"
+                    placeholder="Nombre del grupo"
+                    value={groupForm.nombre}
+                    onChange={(event) => setGroupForm((current) => ({ ...current, nombre: event.target.value }))}
+                    required
+                  />
+                  <input
+                    className="rounded-2xl border border-white/10 bg-white/6 px-4 py-3 text-white outline-none placeholder:text-slate-500 focus:border-[color:var(--accent)]/40"
+                    placeholder="Carrera"
+                    value={groupForm.carrera}
+                    onChange={(event) => setGroupForm((current) => ({ ...current, carrera: event.target.value }))}
+                    required
+                  />
+                  <input
+                    className="rounded-2xl border border-white/10 bg-white/6 px-4 py-3 text-white outline-none placeholder:text-slate-500 focus:border-[color:var(--accent)]/40"
+                    placeholder="Semestre"
+                    type="number"
+                    min="1"
+                    max="12"
+                    value={groupForm.semestre}
+                    onChange={(event) => setGroupForm((current) => ({ ...current, semestre: event.target.value }))}
+                    required
+                  />
+                  <button
+                    type="submit"
+                    disabled={isSubmittingGroup}
+                    className="sm:col-span-2 rounded-full bg-[color:var(--accent)] px-5 py-3 font-semibold text-slate-950 transition hover:bg-[color:var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-70"
+                  >
+                    {isSubmittingGroup ? "Guardando grupo..." : editingGroup ? "Actualizar grupo" : "Guardar grupo"}
+                  </button>
+                </form>
+              </div>
             ) : (
               <form className="mt-6 grid gap-4 sm:grid-cols-2" onSubmit={handleCreateParticipant}>
                 <input
