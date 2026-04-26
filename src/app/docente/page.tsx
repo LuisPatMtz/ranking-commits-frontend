@@ -124,6 +124,13 @@ export default function DocentePage() {
   const [filterCarrera, setFilterCarrera] = useState("all");
   const [filterSemestre, setFilterSemestre] = useState("all");
   const [groupsViewMode, setGroupsViewMode] = useState<"cards" | "list">("cards");
+  const [isCreatingNewCompetitor, setIsCreatingNewCompetitor] = useState(false);
+  const [newCompetitorForm, setNewCompetitorForm] = useState({ nombre: "", github_username: "" });
+  const [isSubmittingNewCompetitor, setIsSubmittingNewCompetitor] = useState(false);
+  const [competitorSearch, setCompetitorSearch] = useState("");
+  const [editingMemberId, setEditingMemberId] = useState<number | null>(null);
+  const [editingMemberForm, setEditingMemberForm] = useState({ nombre: "", github_username: "" });
+  const [isSubmittingMemberEdit, setIsSubmittingMemberEdit] = useState(false);
   useEffect(() => {
     const frameId = window.requestAnimationFrame(() => {
       const session = readAuthSession();
@@ -161,6 +168,12 @@ export default function DocentePage() {
       }
       if (membersModal) {
         setMembersModal(null);
+        setIsCreatingNewCompetitor(false);
+        setNewCompetitorForm({ nombre: "", github_username: "" });
+        setCompetitorSearch("");
+        setSelectedCandidateParticipantId("");
+        setEditingMemberId(null);
+        setEditingMemberForm({ nombre: "", github_username: "" });
         return;
       }
       if (successModal) {
@@ -366,7 +379,95 @@ export default function DocentePage() {
     setActiveModal("group");
   }
 
-  async function handleCreateParticipant(event: React.FormEvent<HTMLFormElement>) {
+  function generateRandomUsername(): string {
+    const adjectives = ["swift", "clever", "brave", "smart", "quick", "keen", "agile", "nimble", "sharp", "bright"];
+    const nouns = ["coder", "hacker", "dev", "ninja", "wizard", "sage", "pro", "expert", "master", "hunter"];
+    const adjective = adjectives[Math.floor(Math.random() * adjectives.length)];
+    const noun = nouns[Math.floor(Math.random() * nouns.length)];
+    const number = Math.floor(Math.random() * 9000) + 1000;
+    return `${adjective}_${noun}${number}`;
+  }
+
+  async function handleCreateCompetitorInModal(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    
+    if (!membersModal || !accessToken) {
+      setFeedback("Sesión inválida. Por favor recarga la página.");
+      return;
+    }
+
+    if (!newCompetitorForm.nombre.trim()) {
+      setFeedback("El nombre del competidor es obligatorio.");
+      return;
+    }
+
+    setIsSubmittingNewCompetitor(true);
+    try {
+      const participant = await apiPost<ParticipantQuickResult>(
+        "/participantes/registro-rapido",
+        {
+          nombre: newCompetitorForm.nombre.trim(),
+          grupo_id: membersModal.groupId,
+          github_username: newCompetitorForm.github_username.trim() || null,
+        },
+        accessToken,
+      );
+      
+      // Recargar miembros del grupo
+      await loadGroupMembersContext(membersModal.groupId, accessToken);
+      
+      setFeedback(`Competidor ${participant.nombre} agregado exitosamente.`);
+      setSuccessModal({
+        title: "Competidor agregado",
+        message: `${participant.nombre} se agregó al grupo. Username: @${participant.username}`,
+      });
+      setNewCompetitorForm({ nombre: "", github_username: "" });
+      setIsCreatingNewCompetitor(false);
+    } catch (error) {
+      setFeedback(error instanceof ApiError ? error.detail : "No se pudo agregar el competidor.");
+    } finally {
+      setIsSubmittingNewCompetitor(false);
+    }
+  }
+
+  async function handleUpdateMember() {
+    if (!membersModal || !accessToken || editingMemberId === null) {
+      setFeedback("Error en la sesión. Por favor recarga la página.");
+      return;
+    }
+
+    if (!editingMemberForm.nombre.trim()) {
+      setFeedback("El nombre del competidor es obligatorio.");
+      return;
+    }
+
+    setIsSubmittingMemberEdit(true);
+    try {
+      await apiPut(
+        `/participantes/${editingMemberId}`,
+        {
+          nombre: editingMemberForm.nombre.trim(),
+          github_username: editingMemberForm.github_username.trim() || null,
+        },
+        accessToken,
+      );
+
+      // Recargar miembros del grupo
+      await loadGroupMembersContext(membersModal.groupId, accessToken);
+
+      setFeedback("Competidor actualizado exitosamente.");
+      setSuccessModal({
+        title: "Competidor actualizado",
+        message: `${editingMemberForm.nombre} se actualizó correctamente.`,
+      });
+      setEditingMemberId(null);
+      setEditingMemberForm({ nombre: "", github_username: "" });
+    } catch (error) {
+      setFeedback(error instanceof ApiError ? error.detail : "No se pudo actualizar el competidor.");
+    } finally {
+      setIsSubmittingMemberEdit(false);
+    }
+  }
     event.preventDefault();
     setIsSubmittingStudent(true);
     setFeedback("Registrando participante...");
@@ -842,13 +943,6 @@ export default function DocentePage() {
       </button>
       <button
         type="button"
-        className="rounded-sm border border-white/10 bg-white/5 px-5 py-3 font-serif text-sm font-semibold text-[color:var(--foreground)] transition hover:border-[color:var(--accent)]/35 hover:bg-white/10"
-        onClick={() => setActiveModal("participant")}
-      >
-        Nuevo participante
-      </button>
-      <button
-        type="button"
         className="rounded-sm border border-red-400/20 bg-red-500/10 px-5 py-3 font-serif text-sm font-semibold text-red-100 transition hover:border-red-300/40 hover:bg-red-500/20"
         onClick={handleLogout}
       >
@@ -866,7 +960,7 @@ export default function DocentePage() {
       ) : (
       <section className="glass-panel rounded-[1.5rem] p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h3 className="font-serif text-2xl font-semibold text-[color:var(--foreground)]">Mis cursos</h3>
+          <h3 className="font-serif text-2xl font-semibold text-[color:var(--foreground)]">Mis proyectos</h3>
           <p className="text-sm text-[color:var(--muted)]">Total: {filteredGroups.length}</p>
         </div>
         <div className="mt-3 grid gap-3 md:grid-cols-[0.9fr_1.2fr_0.9fr_0.8fr]">
@@ -993,7 +1087,7 @@ export default function DocentePage() {
                               void openMembersModal(group);
                             }}
                           >
-                            Agregar alumnos
+                            Agregar competidores
                           </button>
                           <button
                             type="button"
@@ -1341,31 +1435,123 @@ export default function DocentePage() {
               <p className="mt-5 text-sm text-[color:var(--muted)]">Cargando...</p>
             ) : (
               <>
-                <div className="mt-5 shrink-0 grid gap-3 sm:grid-cols-[1fr_auto]">
-                  <select
-                    className="rounded-2xl border border-white/10 bg-white/6 px-4 py-3 text-white outline-none focus:border-[color:var(--accent)]/40"
-                    value={selectedCandidateParticipantId}
-                    onChange={(event) => setSelectedCandidateParticipantId(event.target.value)}
-                    disabled={isSubmittingMemberChange || candidateStudents.length === 0}
-                  >
-                    <option value="" className="bg-[#1a1a16] text-slate-300">
-                      {candidateStudents.length === 0 ? "Sin alumnos disponibles" : "Selecciona un alumno"}
-                    </option>
-                    {candidateStudents.map((candidate) => (
-                      <option key={candidate.participant_id} value={candidate.participant_id} className="bg-[#1a1a16] text-white">
-                        {candidate.nombre} (@{candidate.username})
-                      </option>
-                    ))}
-                  </select>
-                  <button
-                    type="button"
-                    className="rounded-sm bg-[color:var(--accent)] px-5 py-3 font-serif text-sm font-semibold text-[#1a1a16] transition hover:bg-[color:var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-70"
-                    onClick={() => void handleAddStudentToGroup()}
-                    disabled={isSubmittingMemberChange || !selectedCandidateParticipantId}
-                  >
-                    Agregar
-                  </button>
-                </div>
+                {!isCreatingNewCompetitor ? (
+                  <div className="mt-5 shrink-0 space-y-3">
+                    <input
+                      type="text"
+                      className="w-full rounded-2xl border border-white/10 bg-white/6 px-4 py-3 text-white outline-none placeholder:text-slate-500 focus:border-[color:var(--accent)]/40"
+                      placeholder="Busca competidor por nombre o username..."
+                      value={competitorSearch}
+                      onChange={(event) => setCompetitorSearch(event.target.value)}
+                    />
+                    
+                    {candidateStudents.length > 0 && competitorSearch.trim() !== "" && (
+                      <div className="max-h-48 overflow-y-auto rounded-xl border border-white/10 bg-white/5 p-2">
+                        {candidateStudents
+                          .filter((candidate) => 
+                            candidate.nombre.toLowerCase().includes(competitorSearch.toLowerCase()) ||
+                            candidate.username.toLowerCase().includes(competitorSearch.toLowerCase())
+                          )
+                          .map((candidate) => (
+                            <button
+                              key={candidate.participant_id}
+                              type="button"
+                              className="w-full text-left rounded-lg border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white transition hover:border-[color:var(--accent)]/35 hover:bg-white/10 mb-2 last:mb-0"
+                              onClick={() => {
+                                setSelectedCandidateParticipantId(candidate.participant_id.toString());
+                                setCompetitorSearch("");
+                              }}
+                            >
+                              <p className="font-semibold">{candidate.nombre}</p>
+                              <p className="text-xs text-[color:var(--muted)]">@{candidate.username}</p>
+                            </button>
+                          ))}
+                      </div>
+                    )}
+
+                    {selectedCandidateParticipantId && (
+                      <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+                        <p className="text-xs text-[color:var(--muted)] mb-2">Seleccionado:</p>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-semibold text-white">
+                              {candidateStudents.find(c => c.participant_id.toString() === selectedCandidateParticipantId)?.nombre}
+                            </p>
+                            <p className="text-xs text-[color:var(--muted)]">
+                              @{candidateStudents.find(c => c.participant_id.toString() === selectedCandidateParticipantId)?.username}
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            className="rounded-sm bg-[color:var(--accent)] px-4 py-2 font-serif text-sm font-semibold text-[#1a1a16] transition hover:bg-[color:var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-70"
+                            onClick={() => void handleAddStudentToGroup()}
+                            disabled={isSubmittingMemberChange}
+                          >
+                            Agregar
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    <button
+                      type="button"
+                      className="w-full rounded-sm border border-white/10 bg-white/5 px-5 py-3 font-serif text-sm font-semibold text-[color:var(--foreground)] transition hover:border-[color:var(--accent)]/35 hover:bg-white/10"
+                      onClick={() => {
+                        setIsCreatingNewCompetitor(true);
+                        setCompetitorSearch("");
+                        setSelectedCandidateParticipantId("");
+                      }}
+                    >
+                      Crear nuevo competidor
+                    </button>
+                  </div>
+                ) : (
+                  <form onSubmit={handleCreateCompetitorInModal} className="mt-5 shrink-0 space-y-3 rounded-2xl border border-white/10 bg-white/5 p-5">
+                    <div>
+                      <label className="block text-xs font-semibold uppercase tracking-wide text-[color:var(--accent)]">Nombre del competidor</label>
+                      <input
+                        type="text"
+                        className="mt-2 w-full rounded-xl border border-white/10 bg-white/6 px-4 py-3 text-white outline-none placeholder:text-slate-500 focus:border-[color:var(--accent)]/40"
+                        placeholder="Ej: Juan Pérez"
+                        value={newCompetitorForm.nombre}
+                        onChange={(event) => setNewCompetitorForm(prev => ({ ...prev, nombre: event.target.value }))}
+                        disabled={isSubmittingNewCompetitor}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold uppercase tracking-wide text-[color:var(--accent)]">GitHub username (opcional)</label>
+                      <input
+                        type="text"
+                        className="mt-2 w-full rounded-xl border border-white/10 bg-white/6 px-4 py-3 text-white outline-none placeholder:text-slate-500 focus:border-[color:var(--accent)]/40"
+                        placeholder="Ej: juan-perez"
+                        value={newCompetitorForm.github_username}
+                        onChange={(event) => setNewCompetitorForm(prev => ({ ...prev, github_username: event.target.value }))}
+                        disabled={isSubmittingNewCompetitor}
+                      />
+                    </div>
+                    <p className="text-xs text-[color:var(--muted)]">El username se generará automáticamente de forma aleatoria.</p>
+                    <div className="flex gap-3 pt-2">
+                      <button
+                        type="submit"
+                        className="flex-1 rounded-sm bg-[color:var(--accent)] px-4 py-3 font-serif text-sm font-semibold text-[#1a1a16] transition hover:bg-[color:var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-70"
+                        disabled={isSubmittingNewCompetitor}
+                      >
+                        {isSubmittingNewCompetitor ? "Creando..." : "Crear competidor"}
+                      </button>
+                      <button
+                        type="button"
+                        className="flex-1 rounded-sm border border-white/10 bg-white/5 px-4 py-3 font-serif text-sm font-semibold text-[color:var(--foreground)] transition hover:border-[color:var(--accent)]/35 hover:bg-white/10"
+                        onClick={() => {
+                          setIsCreatingNewCompetitor(false);
+                          setNewCompetitorForm({ nombre: "", github_username: "" });
+                        }}
+                        disabled={isSubmittingNewCompetitor}
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </form>
+                )}
 
                 <div className="mt-5 min-h-0 flex-1 overflow-auto rounded-2xl border border-white/10 bg-white/5 relative">
                   {groupMembers.length === 0 ? (
@@ -1388,6 +1574,16 @@ export default function DocentePage() {
                             <td className="px-4 py-3 hidden sm:table-cell">{member.github_username ? `@${member.github_username}` : "-"}</td>
                             <td className="px-4 py-3">
                               <div className="flex flex-col items-end justify-end gap-2 sm:flex-row sm:items-center">
+                                <button
+                                  type="button"
+                                  className="w-full whitespace-nowrap rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-semibold text-white transition hover:border-[color:var(--accent)]/50 hover:bg-white/10 sm:w-auto"
+                                  onClick={() => {
+                                    setEditingMemberId(member.participant_id);
+                                    setEditingMemberForm({ nombre: member.nombre, github_username: member.github_username || "" });
+                                  }}
+                                >
+                                  Modificar
+                                </button>
                                 <button
                                   type="button"
                                   className="w-full whitespace-nowrap rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-semibold text-white transition hover:border-[color:var(--accent)]/50 hover:bg-white/10 sm:w-auto"
@@ -1416,6 +1612,76 @@ export default function DocentePage() {
           </div>
         </div>
       ) : null}
+
+      {editingMemberId !== null && (
+        <div className="fixed inset-0 z-[72] flex items-center justify-center bg-[#16160f]/80 px-4 py-6">
+          <div className="glass-panel w-full max-w-md rounded-[1.8rem] p-7">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="font-mono text-xs uppercase tracking-[0.24em] text-[color:var(--accent)]">Modificar competidor</p>
+                <h3 className="mt-2 font-serif text-2xl sm:text-3xl font-semibold text-[color:var(--foreground)]">Editar datos</h3>
+              </div>
+              <button
+                type="button"
+                className="rounded-full border border-white/10 px-3 py-1 text-sm text-[color:var(--muted)] transition hover:border-white/20 hover:text-white"
+                onClick={() => {
+                  setEditingMemberId(null);
+                  setEditingMemberForm({ nombre: "", github_username: "" });
+                }}
+                disabled={isSubmittingMemberEdit}
+              >
+                Cerrar
+              </button>
+            </div>
+
+            <div className="mt-6 space-y-4">
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wide text-[color:var(--accent)]">Nombre</label>
+                <input
+                  type="text"
+                  className="mt-2 w-full rounded-xl border border-white/10 bg-white/6 px-4 py-3 text-white outline-none placeholder:text-slate-500 focus:border-[color:var(--accent)]/40"
+                  value={editingMemberForm.nombre}
+                  onChange={(event) => setEditingMemberForm(prev => ({ ...prev, nombre: event.target.value }))}
+                  disabled={isSubmittingMemberEdit}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wide text-[color:var(--accent)]">GitHub username (opcional)</label>
+                <input
+                  type="text"
+                  className="mt-2 w-full rounded-xl border border-white/10 bg-white/6 px-4 py-3 text-white outline-none placeholder:text-slate-500 focus:border-[color:var(--accent)]/40"
+                  placeholder="Ej: juan-perez"
+                  value={editingMemberForm.github_username}
+                  onChange={(event) => setEditingMemberForm(prev => ({ ...prev, github_username: event.target.value }))}
+                  disabled={isSubmittingMemberEdit}
+                />
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="button"
+                  className="flex-1 rounded-sm bg-[color:var(--accent)] px-4 py-3 font-serif text-sm font-semibold text-[#1a1a16] transition hover:bg-[color:var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-70"
+                  onClick={() => void handleUpdateMember()}
+                  disabled={isSubmittingMemberEdit}
+                >
+                  {isSubmittingMemberEdit ? "Guardando..." : "Guardar cambios"}
+                </button>
+                <button
+                  type="button"
+                  className="flex-1 rounded-sm border border-white/10 bg-white/5 px-4 py-3 font-serif text-sm font-semibold text-[color:var(--foreground)] transition hover:border-[color:var(--accent)]/35 hover:bg-white/10"
+                  onClick={() => {
+                    setEditingMemberId(null);
+                    setEditingMemberForm({ nombre: "", github_username: "" });
+                  }}
+                  disabled={isSubmittingMemberEdit}
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {memberCommitsModal ? (
         <div className="fixed inset-0 z-[73] flex items-center justify-center bg-[#16160f]/80 px-4 py-6">
