@@ -114,6 +114,7 @@ export default function DocentePage() {
   const [generalRankingPeriod, setGeneralRankingPeriod] = useState<"7d" | "30d" | "90d" | "1y" | "all" | "custom">("1y");
   const [generalRankingFromDate, setGeneralRankingFromDate] = useState("");
   const [generalRankingToDate, setGeneralRankingToDate] = useState("");
+  const [isGeneralRankingModalOpen, setIsGeneralRankingModalOpen] = useState(false);
   const [rankingDrafts, setRankingDrafts] = useState<RankingDraftMap>({});
   const [isLoadingRanking, setIsLoadingRanking] = useState(false);
   const [isLoadingGeneralRanking, setIsLoadingGeneralRanking] = useState(false);
@@ -150,6 +151,10 @@ export default function DocentePage() {
         setRankingModal(null);
         return;
       }
+      if (isGeneralRankingModalOpen) {
+        setIsGeneralRankingModalOpen(false);
+        return;
+      }
       if (memberCommitsModal) {
         setMemberCommitsModal(null);
         return;
@@ -181,7 +186,7 @@ export default function DocentePage() {
     return () => {
       window.removeEventListener("keydown", handleEscapeKey);
     };
-  }, [activeModal, cardMenuGroupId, isNotificationsOpen, memberCommitsModal, membersModal, rankingModal, shareModal, successModal]);
+  }, [activeModal, cardMenuGroupId, isNotificationsOpen, memberCommitsModal, membersModal, rankingModal, shareModal, successModal, isGeneralRankingModalOpen]);
 
   const availableCarreras = Array.from(new Set(groups.map((group) => group.carrera))).sort((a, b) => a.localeCompare(b));
   const availableSemestres = Array.from(new Set(groups.map((group) => group.semestre))).sort((a, b) => a - b);

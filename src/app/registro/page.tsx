@@ -37,36 +37,58 @@ export default function RegistroPage() {
   }
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden px-6 py-10 text-white">
-      <div className="soft-grid absolute inset-0 opacity-20" />
-      <div className="absolute left-[-8rem] top-16 h-72 w-72 rounded-full bg-[color:var(--accent)]/10 blur-3xl" />
-      <div className="absolute right-[-6rem] top-1/3 h-72 w-72 rounded-full bg-[color:var(--warm)]/10 blur-3xl" />
-
-      <div className="relative grid w-full max-w-6xl gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-        <section className="glass-panel rounded-[2rem] p-8 lg:p-10">
-          <p className="font-mono text-xs uppercase tracking-[0.26em] text-[color:var(--warm)]">Registro de docentes</p>
-          <h1 className="mt-4 max-w-xl text-5xl font-semibold tracking-[-0.05em] text-white">
-            Da de alta tu acceso docente en menos de un minuto.
-          </h1>
-          <p className="mt-5 max-w-xl text-lg leading-8 text-[color:var(--muted)]">
-            Solo necesitas nombre, nombre de usuario y contrasena. Los participantes se administran aparte y el admin va por un flujo separado.
-          </p>
-          <div className="mt-10 rounded-[1.4rem] border border-white/10 bg-white/5 p-4">
-            <p className="font-mono text-xs uppercase tracking-[0.22em] text-[color:var(--muted)]">Nota</p>
-            <p className="mt-3 text-base text-white">
-              Esta pantalla crea usuarios con rol docente y password hasheada en el backend.
+    <div 
+      className="relative min-h-screen w-full overflow-hidden"
+      style={{
+        background: 'linear-gradient(135deg, #1a1a16 0%, #16160f 50%, #1a1a16 100%)',
+        backgroundSize: '200% 200%',
+        animation: 'gradient-shift 20s ease infinite'
+      }}
+    >
+      <div className="relative mx-auto flex w-full max-w-6xl flex-col lg:flex-row gap-8 px-4 py-10 sm:px-6 sm:py-12 lg:px-8 lg:py-14 min-h-screen items-center justify-center">
+        
+        {/* Left side - Info */}
+        <section className="flex-1 space-y-8 max-w-2xl">
+          <div className="space-y-4">
+            <p className="text-xs uppercase tracking-widest font-mono text-[color:var(--muted)]">Registro docente</p>
+            <h1 className="font-serif text-4xl sm:text-5xl font-semibold tracking-tight text-[color:var(--foreground)] leading-tight">
+              Inicia tu panel de evaluación
+            </h1>
+            <p className="text-sm leading-7 text-[color:var(--muted)] tracking-wide">
+              Acceso rápido para docentes que desean crear grupos, administrar participantes y generar rankings basados en contribuciones reales a repositorios.
             </p>
+          </div>
+
+          <div className="space-y-4 border-l-2 border-[color:var(--accent)] pl-6">
+            <div>
+              <h3 className="font-serif text-sm font-semibold text-[color:var(--foreground)]">Registro inmediato</h3>
+              <p className="text-xs leading-5 text-[color:var(--muted)] tracking-wide mt-1">Crea tu cuenta docente en menos de un minuto</p>
+            </div>
+            <div>
+              <h3 className="font-serif text-sm font-semibold text-[color:var(--foreground)]">Sin complejidad</h3>
+              <p className="text-xs leading-5 text-[color:var(--muted)] tracking-wide mt-1">Solo necesitas nombre, usuario y contraseña</p>
+            </div>
+            <div>
+              <h3 className="font-serif text-sm font-semibold text-[color:var(--foreground)]">Seguro</h3>
+              <p className="text-xs leading-5 text-[color:var(--muted)] tracking-wide mt-1">Autenticación JWT, contraseñas hasheadas en backend</p>
+            </div>
+            <div>
+              <h3 className="font-serif text-sm font-semibold text-[color:var(--foreground)]">Listo para usar</h3>
+              <p className="text-xs leading-5 text-[color:var(--muted)] tracking-wide mt-1">Accede inmediatamente después del registro</p>
+            </div>
           </div>
         </section>
 
-        <form onSubmit={handleRegister} className="glass-panel w-full rounded-[2rem] p-8 lg:p-10">
-          <p className="font-mono text-xs uppercase tracking-[0.26em] text-[color:var(--accent)]">Registro</p>
-          <h2 className="mt-4 text-3xl font-semibold tracking-[-0.04em] text-white">Crear cuenta docente</h2>
-          <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">Tu usuario se crea con rol docente por defecto.</p>
+        {/* Right side - Form */}
+        <form onSubmit={handleRegister} className="flex-1 max-w-sm space-y-6">
+          <div className="space-y-3">
+            <p className="text-xs uppercase tracking-widest font-mono text-[color:var(--muted)]">Crear cuenta</p>
+            <h2 className="font-serif text-2xl font-semibold tracking-tight text-[color:var(--foreground)]">Regístrate como docente</h2>
+          </div>
 
-          <div className="mt-8 space-y-4">
+          <div className="space-y-4">
             <input
-              className="w-full rounded-2xl border border-white/10 bg-white/6 px-4 py-3 text-white outline-none transition placeholder:text-slate-500 focus:border-[color:var(--accent)]/40"
+              className="w-full bg-[color:var(--background-muted)] border border-[color:var(--border)] px-4 py-2.5 text-[color:var(--foreground)] outline-none transition placeholder:text-[color:var(--muted)] focus:border-[color:var(--accent)]"
               placeholder="Nombre completo"
               type="text"
               value={nombre}
@@ -74,7 +96,7 @@ export default function RegistroPage() {
               required
             />
             <input
-              className="w-full rounded-2xl border border-white/10 bg-white/6 px-4 py-3 text-white outline-none transition placeholder:text-slate-500 focus:border-[color:var(--accent)]/40"
+              className="w-full bg-[color:var(--background-muted)] border border-[color:var(--border)] px-4 py-2.5 text-[color:var(--foreground)] outline-none transition placeholder:text-[color:var(--muted)] focus:border-[color:var(--accent)]"
               placeholder="Nombre de usuario"
               type="text"
               value={username}
@@ -82,8 +104,8 @@ export default function RegistroPage() {
               required
             />
             <input
-              className="w-full rounded-2xl border border-white/10 bg-white/6 px-4 py-3 text-white outline-none transition placeholder:text-slate-500 focus:border-[color:var(--accent)]/40"
-              placeholder="Contrasena"
+              className="w-full bg-[color:var(--background-muted)] border border-[color:var(--border)] px-4 py-2.5 text-[color:var(--foreground)] outline-none transition placeholder:text-[color:var(--muted)] focus:border-[color:var(--accent)]"
+              placeholder="Contraseña"
               type="password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
@@ -91,15 +113,31 @@ export default function RegistroPage() {
             />
           </div>
 
-          <button className="mt-6 w-full rounded-full bg-[color:var(--warm)] px-4 py-3 font-medium text-slate-950 transition hover:bg-[#ffbe4a]" type="submit">
-            Registrarme
+          <button 
+            className="w-full bg-[color:var(--accent)] text-[#1a1a16] font-serif font-semibold text-sm px-4 py-2.5 transition hover:bg-[color:var(--accent-strong)]"
+            type="submit"
+          >
+            Crear mi cuenta
           </button>
-          <p className="mt-4 min-h-6 text-sm text-[color:var(--muted)]">{result}</p>
-          <p className="mt-4 text-sm text-[color:var(--muted)]">
-            Ya tienes cuenta?{" "}
-            <Link href="/login" className="text-[color:var(--accent)] hover:text-[color:var(--accent-strong)]">
-              Inicia sesion aqui
+
+          {result && (
+            <div className={`text-xs p-3 border-l-2 ${result.includes("Cuenta docente creada") ? "border-[color:var(--accent)] text-[color:var(--accent)]" : "border-[#d97706] text-[#f59e0b]"}`}>
+              {result}
+            </div>
+          )}
+
+          <div className="space-y-3 pt-4 border-t border-[color:var(--border)]">
+            <p className="text-xs text-[color:var(--muted)] tracking-wide">¿Ya eres docente registrado?</p>
+            <Link 
+              href="/login" 
+              className="block w-full text-center border border-[color:var(--border)] text-[color:var(--foreground)] font-serif text-sm px-4 py-2.5 transition hover:bg-[color:var(--background-muted)]"
+            >
+              Iniciar sesión
             </Link>
+          </div>
+
+          <p className="text-xs text-[color:var(--muted)] leading-5 text-center pt-2">
+            Tu cuenta se creará con rol docente. Los participantes se gestionan desde tu panel una vez accedas.
           </p>
         </form>
       </div>

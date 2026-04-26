@@ -1,23 +1,33 @@
 @import "tailwindcss";
 
+@keyframes gradient-shift {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
 :root {
-  --background: #07111f;
-  --background-muted: #0d1a2d;
-  --surface: rgba(12, 22, 39, 0.78);
-  --surface-strong: rgba(18, 31, 54, 0.92);
-  --border: rgba(148, 163, 184, 0.16);
-  --foreground: #f3f8ff;
-  --muted: #9cb0c9;
-  --accent: #7df9c6;
-  --accent-strong: #36cfa0;
-  --warm: #ffd27d;
-  --shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
+  --background: #1a1a16;
+  --background-muted: #26261f;
+  --surface: rgba(38, 38, 31, 0.9);
+  --surface-strong: rgba(42, 42, 35, 0.95);
+  --border: rgba(200, 190, 170, 0.12);
+  --foreground: #f5f5f0;
+  --muted: #a8a89a;
+  --accent: #c9a876;
+  --accent-strong: #d4b896;
+  --warm: #b8956a;
+  --shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-display);
+  --font-serif: var(--font-serif);
   --font-mono: var(--font-mono);
 }
 
@@ -27,9 +37,9 @@
 
 html {
   background:
-    radial-gradient(circle at top left, rgba(54, 207, 160, 0.16), transparent 30%),
-    radial-gradient(circle at top right, rgba(255, 210, 125, 0.14), transparent 28%),
-    linear-gradient(180deg, #091120 0%, #08101d 100%);
+    radial-gradient(circle at top left, rgba(150, 130, 100, 0.08), transparent 40%),
+    radial-gradient(circle at bottom right, rgba(120, 100, 80, 0.06), transparent 40%),
+    linear-gradient(180deg, #1a1a16 0%, #16160f 100%);
 }
 
 body {
@@ -38,9 +48,9 @@ body {
   font-family: var(--font-display), sans-serif;
   min-height: 100vh;
   background:
-    radial-gradient(circle at top left, rgba(54, 207, 160, 0.14), transparent 22%),
-    radial-gradient(circle at 85% 15%, rgba(255, 210, 125, 0.12), transparent 22%),
-    linear-gradient(180deg, rgba(8, 16, 29, 0.96) 0%, rgba(7, 17, 31, 1) 100%);
+    radial-gradient(circle at top left, rgba(150, 130, 100, 0.06), transparent 35%),
+    radial-gradient(circle at 85% 15%, rgba(120, 100, 80, 0.04), transparent 35%),
+    linear-gradient(180deg, #1a1a16 0%, #16160f 100%);
 }
 
 a {
@@ -48,12 +58,12 @@ a {
 }
 
 ::selection {
-  background: rgba(125, 249, 198, 0.26);
-  color: #f8fffd;
+  background: rgba(201, 168, 118, 0.2);
+  color: #f5f5f0;
 }
 
 .glass-panel {
-  background: linear-gradient(180deg, rgba(20, 33, 57, 0.88) 0%, rgba(12, 22, 39, 0.82) 100%);
+  background: linear-gradient(180deg, rgba(42, 42, 35, 0.88) 0%, rgba(38, 38, 31, 0.82) 100%);
   border: 1px solid var(--border);
   box-shadow: var(--shadow);
   backdrop-filter: blur(18px);
@@ -61,8 +71,8 @@ a {
 
 .soft-grid {
   background-image:
-    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+    linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
   background-size: 32px 32px;
 }
 

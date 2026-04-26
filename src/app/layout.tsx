@@ -1,10 +1,16 @@
 import type { Metadata } from "next";
-import { IBM_Plex_Mono, Space_Grotesk } from "next/font/google";
+import { IBM_Plex_Mono, Space_Grotesk, Playfair_Display } from "next/font/google";
 import "./globals.css";
 
 const displayFont = Space_Grotesk({
   variable: "--font-display",
   subsets: ["latin"],
+});
+
+const serifFont = Playfair_Display({
+  variable: "--font-serif",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
 });
 
 const monoFont = IBM_Plex_Mono({
@@ -24,7 +30,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${displayFont.variable} ${monoFont.variable} h-full antialiased`}>
+    <html lang="en" className={`${displayFont.variable} ${serifFont.variable} ${monoFont.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
   );
