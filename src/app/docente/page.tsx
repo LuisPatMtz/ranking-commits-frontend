@@ -807,9 +807,6 @@ export default function DocentePage() {
     setGeneratedShareLink("");
   }
 
-  function handleGoHome() {
-    window.location.href = "/";
-  }
 
   function handleLogout() {
     clearAuthSession();
@@ -818,13 +815,7 @@ export default function DocentePage() {
 
   const docenteHeaderActions = (
     <>
-      <button
-        type="button"
-        className="rounded-full border border-white/10 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition hover:border-[color:var(--accent)]/35 hover:bg-white/10"
-        onClick={handleGoHome}
-      >
-        Regresar al inicio
-      </button>
+
       <button
         type="button"
         className="relative inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white transition hover:border-[color:var(--accent)]/35 hover:bg-white/10"
@@ -844,21 +835,21 @@ export default function DocentePage() {
       </button>
       <button
         type="button"
-        className="rounded-full bg-[color:var(--accent)] px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-[color:var(--accent-strong)]"
+        className="rounded-sm bg-[color:var(--accent)] px-5 py-3 font-serif text-sm font-semibold text-[#1a1a16] transition hover:bg-[color:var(--accent-strong)]"
         onClick={() => openGroupCreateModal()}
       >
         Nuevo grupo
       </button>
       <button
         type="button"
-        className="rounded-full border border-white/10 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition hover:border-[color:var(--accent)]/35 hover:bg-white/10"
+        className="rounded-sm border border-white/10 bg-white/5 px-5 py-3 font-serif text-sm font-semibold text-[color:var(--foreground)] transition hover:border-[color:var(--accent)]/35 hover:bg-white/10"
         onClick={() => setActiveModal("participant")}
       >
         Nuevo participante
       </button>
       <button
         type="button"
-        className="rounded-full border border-red-400/20 bg-red-500/10 px-5 py-3 text-sm font-semibold text-red-100 transition hover:border-red-300/40 hover:bg-red-500/20"
+        className="rounded-sm border border-red-400/20 bg-red-500/10 px-5 py-3 font-serif text-sm font-semibold text-red-100 transition hover:border-red-300/40 hover:bg-red-500/20"
         onClick={handleLogout}
       >
         Salir
@@ -875,7 +866,7 @@ export default function DocentePage() {
       ) : (
       <section className="glass-panel rounded-[1.5rem] p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h3 className="text-lg font-semibold text-white">Mis cursos</h3>
+          <h3 className="font-serif text-2xl font-semibold text-[color:var(--foreground)]">Mis cursos</h3>
           <p className="text-sm text-[color:var(--muted)]">Total: {filteredGroups.length}</p>
         </div>
         <div className="mt-3 grid gap-3 md:grid-cols-[0.9fr_1.2fr_0.9fr_0.8fr]">
@@ -884,9 +875,9 @@ export default function DocentePage() {
             value={filterSemestre}
             onChange={(event) => setFilterSemestre(event.target.value)}
           >
-            <option value="all" className="bg-slate-900 text-white">Todos los semestres</option>
+            <option value="all" className="bg-[#1a1a16] text-white">Todos los semestres</option>
             {availableSemestres.map((semestre) => (
-              <option key={semestre} value={String(semestre)} className="bg-slate-900 text-white">
+              <option key={semestre} value={String(semestre)} className="bg-[#1a1a16] text-white">
                 Semestre {semestre}
               </option>
             ))}
@@ -902,9 +893,9 @@ export default function DocentePage() {
             value={filterCarrera}
             onChange={(event) => setFilterCarrera(event.target.value)}
           >
-            <option value="all" className="bg-slate-900 text-white">Todas las carreras</option>
+            <option value="all" className="bg-[#1a1a16] text-white">Todas las carreras</option>
             {availableCarreras.map((carrera) => (
-              <option key={carrera} value={carrera} className="bg-slate-900 text-white">
+              <option key={carrera} value={carrera} className="bg-[#1a1a16] text-white">
                 {carrera}
               </option>
             ))}
@@ -914,8 +905,8 @@ export default function DocentePage() {
             value={groupsViewMode}
             onChange={(event) => setGroupsViewMode(event.target.value as "cards" | "list")}
           >
-            <option value="cards" className="bg-slate-900 text-white">Tarjeta</option>
-            <option value="list" className="bg-slate-900 text-white">Lista</option>
+            <option value="cards" className="bg-[#1a1a16] text-white">Tarjeta</option>
+            <option value="list" className="bg-[#1a1a16] text-white">Lista</option>
           </select>
         </div>
         {feedback ? (
@@ -957,7 +948,7 @@ export default function DocentePage() {
                   }}
                 />
                 <div className="p-4">
-                  <h4 className="text-base font-semibold text-white">{group.nombre}</h4>
+                  <h4 className="text-base font-semibold text-[color:var(--foreground)]">{group.nombre}</h4>
                   <p className="mt-1 text-sm text-[color:var(--muted)]">
                     {group.carrera} - Semestre {group.semestre}
                   </p>
@@ -982,7 +973,7 @@ export default function DocentePage() {
                       </button>
 
                       {cardMenuGroupId === group.id ? (
-                        <div className="absolute bottom-10 right-0 z-30 w-44 overflow-hidden rounded-xl border border-white/10 bg-slate-900/95 shadow-xl backdrop-blur">
+                        <div className="absolute bottom-10 right-0 z-30 w-44 overflow-hidden rounded-xl border border-white/10 bg-[#1a1a16]/95 shadow-xl backdrop-blur">
                           <button
                             type="button"
                             className="block w-full px-4 py-2 text-left text-sm text-white transition hover:bg-white/10"
@@ -1072,117 +1063,31 @@ export default function DocentePage() {
           </div>
         )}
 
-        <div className="mt-6 overflow-hidden rounded-2xl border border-white/10 bg-white/5">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 px-4 py-4">
-            <div>
-              <p className="text-sm font-semibold text-white">Ranking general de tus grupos</p>
-              <p className="mt-1 text-xs text-[color:var(--muted)]">Filtra por metrica y periodo usando solo los grupos visibles ahora.</p>
-            </div>
-            <p className="text-xs text-[color:var(--muted)]">Alumnos: {generalRankingItems.length}</p>
-          </div>
-
-          <div className="grid gap-3 border-b border-white/10 px-4 py-4 md:grid-cols-[0.9fr_0.9fr_0.9fr_0.9fr]">
-            <select
-              className="rounded-xl border border-white/10 bg-white/6 px-4 py-3 text-sm text-white outline-none focus:border-[color:var(--accent)]/40"
-              value={generalRankingMetric}
-              onChange={(event) => setGeneralRankingMetric(event.target.value as "todo" | "commits" | "contribuciones")}
-            >
-              <option value="todo" className="bg-slate-900 text-white">Todo</option>
-              <option value="commits" className="bg-slate-900 text-white">Commits</option>
-              <option value="contribuciones" className="bg-slate-900 text-white">Contribuciones GitHub</option>
-            </select>
-            <select
-              className="rounded-xl border border-white/10 bg-white/6 px-4 py-3 text-sm text-white outline-none focus:border-[color:var(--accent)]/40"
-              value={generalRankingPeriod}
-              onChange={(event) => setGeneralRankingPeriod(event.target.value as "7d" | "30d" | "90d" | "1y" | "all" | "custom")}
-            >
-              <option value="7d" className="bg-slate-900 text-white">Ultimos 7 dias</option>
-              <option value="30d" className="bg-slate-900 text-white">Ultimos 30 dias</option>
-              <option value="90d" className="bg-slate-900 text-white">Ultimos 90 dias</option>
-              <option value="1y" className="bg-slate-900 text-white">Ultimo anio</option>
-              <option value="all" className="bg-slate-900 text-white">Todo</option>
-              <option value="custom" className="bg-slate-900 text-white">Rango personalizado</option>
-            </select>
-            <input
-              type="date"
-              className="rounded-xl border border-white/10 bg-white/6 px-4 py-3 text-sm text-white outline-none focus:border-[color:var(--accent)]/40 disabled:opacity-40"
-              value={generalRankingFromDate}
-              onChange={(event) => setGeneralRankingFromDate(event.target.value)}
-              disabled={generalRankingPeriod !== "custom"}
-            />
-            <input
-              type="date"
-              className="rounded-xl border border-white/10 bg-white/6 px-4 py-3 text-sm text-white outline-none focus:border-[color:var(--accent)]/40 disabled:opacity-40"
-              value={generalRankingToDate}
-              onChange={(event) => setGeneralRankingToDate(event.target.value)}
-              disabled={generalRankingPeriod !== "custom"}
-            />
-          </div>
-
-          {isLoadingGeneralRanking ? (
-            <p className="px-4 py-4 text-sm text-[color:var(--muted)]">Cargando ranking general...</p>
-          ) : generalRankingItems.length === 0 ? (
-            <p className="px-4 py-4 text-sm text-[color:var(--muted)]">No hay alumnos suficientes para construir el ranking general.</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-left text-sm">
-                <thead>
-                  <tr className="border-b border-white/10 text-[color:var(--muted)]">
-                    <th className="px-4 py-3 font-medium">Ranking</th>
-                    <th className="px-4 py-3 font-medium">Alumno</th>
-                    <th className="px-4 py-3 font-medium">GitHub</th>
-                    <th className="px-4 py-3 font-medium">Grupo</th>
-                    <th className="px-4 py-3 font-medium">{generalMetricLabel}</th>
-                    <th className="px-4 py-3 font-medium">Puntos metrica</th>
-                    <th className="px-4 py-3 font-medium">Calif maestro</th>
-                    <th className="px-4 py-3 font-medium">Calif proyecto</th>
-                    <th className="px-4 py-3 font-medium">{generalRankingMetric === "todo" ? "Promedio" : "Score"}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {generalRankingItems.map((item) => (
-                    <tr key={`${item.group_id}-${item.usuario_id}`} className="border-b border-white/5 text-white/95 last:border-b-0">
-                      <td className="px-4 py-3">#{item.rank}</td>
-                      <td className="px-4 py-3">{item.nombre}</td>
-                      <td className="px-4 py-3">
-                        {item.github_username ? (
-                          <a
-                            className="text-[color:var(--accent)] hover:underline"
-                            href={`https://github.com/${item.github_username}`}
-                            target="_blank"
-                            rel="noreferrer"
-                          >
-                            @{item.github_username}
-                          </a>
-                        ) : (
-                          "-"
-                        )}
-                      </td>
-                      <td className="px-4 py-3">{item.group_name}</td>
-                      <td className="px-4 py-3">{item.metric_value}</td>
-                      <td className="px-4 py-3">{item.metric_points.toFixed(2)}</td>
-                      <td className="px-4 py-3">{item.docente_grade.toFixed(2)}</td>
-                      <td className="px-4 py-3">{item.proyecto_grade.toFixed(2)}</td>
-                      <td className="px-4 py-3 font-semibold">{item.total_score.toFixed(2)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+        <div className="mt-8 flex items-center justify-center">
+          <button
+            type="button"
+            className="flex items-center gap-3 rounded-sm border border-white/10 bg-white/5 px-8 py-4 font-serif text-sm font-semibold text-[color:var(--foreground)] transition hover:border-[color:var(--accent)]/35 hover:bg-white/10"
+            onClick={() => setIsGeneralRankingModalOpen(true)}
+          >
+            <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5 text-[color:var(--accent)]" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 3v18h18" />
+              <path d="m19 9-5 5-4-4-3 3" />
+            </svg>
+            Ranking general de tus grupos
+          </button>
         </div>
       </section>
       )}
 
       {activeModal ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/65 px-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#16160f]/80 px-4">
           <div className="glass-panel w-full max-w-xl rounded-[1.8rem] p-7">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="font-mono text-xs uppercase tracking-[0.24em] text-[color:var(--accent)]">
                   {activeModal === "group" ? (editingGroup ? "Modificar grupo" : "Nuevo grupo") : "Nuevo participante"}
                 </p>
-                <h3 className="mt-2 text-2xl font-semibold text-white">
+                <h3 className="mt-2 font-serif text-2xl sm:text-3xl font-semibold text-[color:var(--foreground)]">
                   {activeModal === "group" ? (editingGroup ? "Modificar grupo" : "Agregar grupo") : "Agregar participante"}
                 </h3>
               </div>
@@ -1272,11 +1177,11 @@ export default function DocentePage() {
                   onChange={(event) => setStudentForm((current) => ({ ...current, grupo_id: event.target.value }))}
                   required
                 >
-                  <option value="" className="bg-slate-900 text-slate-300">
+                  <option value="" className="bg-[#1a1a16] text-slate-300">
                     Selecciona un grupo
                   </option>
                   {groups.map((group) => (
-                    <option key={group.id} value={group.id} className="bg-slate-900 text-white">
+                    <option key={group.id} value={group.id} className="bg-[#1a1a16] text-white">
                       {group.nombre}
                     </option>
                   ))}
@@ -1301,9 +1206,9 @@ export default function DocentePage() {
       ) : null}
 
       {successModal ? (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/70 px-4">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-[#16160f]/80 px-4">
           <div className="glass-panel w-full max-w-md rounded-[1.8rem] p-7">
-            <h3 className="mt-3 text-2xl font-semibold text-white">{successModal.title}</h3>
+            <h3 className="mt-3 font-serif text-2xl sm:text-3xl font-semibold text-[color:var(--foreground)]">{successModal.title}</h3>
             <p className="mt-3 text-sm leading-6 text-[color:var(--muted)]">{successModal.message}</p>
             <button
               type="button"
@@ -1317,12 +1222,12 @@ export default function DocentePage() {
       ) : null}
 
       {shareModal ? (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/70 px-4">
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-[#16160f]/80 px-4">
           <div className="glass-panel w-full max-w-xl rounded-[1.8rem] p-7">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="font-mono text-xs uppercase tracking-[0.24em] text-[color:var(--accent)]">Compartir grupo</p>
-                <h3 className="mt-2 text-2xl font-semibold text-white">{shareModal.groupName}</h3>
+                <h3 className="mt-2 font-serif text-2xl sm:text-3xl font-semibold text-[color:var(--foreground)]">{shareModal.groupName}</h3>
               </div>
               <button
                 type="button"
@@ -1400,7 +1305,7 @@ export default function DocentePage() {
               {generatedShareLink ? (
                 <>
                   <input
-                    className="mt-3 w-full rounded-xl border border-white/10 bg-slate-950/40 px-3 py-2 text-xs text-white/90"
+                    className="mt-3 w-full rounded-xl border border-white/10 bg-[#16160f]/40 px-3 py-2 text-xs text-white/90"
                     value={generatedShareLink}
                     readOnly
                   />
@@ -1419,10 +1324,10 @@ export default function DocentePage() {
       ) : null}
 
       {membersModal ? (
-        <div className="fixed inset-0 z-[71] flex items-center justify-center bg-slate-950/70 px-4">
-          <div className="glass-panel w-full max-w-3xl rounded-[1.8rem] p-7">
-            <div className="flex items-start justify-between gap-4">
-              <h3 className="text-2xl font-semibold text-white">{membersModal.groupName}</h3>
+        <div className="fixed inset-0 z-[71] flex items-center justify-center bg-[#16160f]/80 px-4 py-6">
+          <div className="glass-panel flex max-h-[90vh] w-full max-w-4xl flex-col rounded-[1.8rem] p-7">
+            <div className="flex shrink-0 items-start justify-between gap-4">
+              <h3 className="font-serif text-2xl sm:text-3xl font-semibold text-[color:var(--foreground)]">{membersModal.groupName}</h3>
               <button
                 type="button"
                 className="rounded-full border border-white/10 px-3 py-1 text-sm text-[color:var(--muted)] transition hover:border-white/20 hover:text-white"
@@ -1436,25 +1341,25 @@ export default function DocentePage() {
               <p className="mt-5 text-sm text-[color:var(--muted)]">Cargando...</p>
             ) : (
               <>
-                <div className="mt-5 grid gap-3 sm:grid-cols-[1fr_auto]">
+                <div className="mt-5 shrink-0 grid gap-3 sm:grid-cols-[1fr_auto]">
                   <select
                     className="rounded-2xl border border-white/10 bg-white/6 px-4 py-3 text-white outline-none focus:border-[color:var(--accent)]/40"
                     value={selectedCandidateParticipantId}
                     onChange={(event) => setSelectedCandidateParticipantId(event.target.value)}
                     disabled={isSubmittingMemberChange || candidateStudents.length === 0}
                   >
-                    <option value="" className="bg-slate-900 text-slate-300">
+                    <option value="" className="bg-[#1a1a16] text-slate-300">
                       {candidateStudents.length === 0 ? "Sin alumnos disponibles" : "Selecciona un alumno"}
                     </option>
                     {candidateStudents.map((candidate) => (
-                      <option key={candidate.participant_id} value={candidate.participant_id} className="bg-slate-900 text-white">
+                      <option key={candidate.participant_id} value={candidate.participant_id} className="bg-[#1a1a16] text-white">
                         {candidate.nombre} (@{candidate.username})
                       </option>
                     ))}
                   </select>
                   <button
                     type="button"
-                    className="rounded-full bg-[color:var(--accent)] px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-[color:var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-70"
+                    className="rounded-sm bg-[color:var(--accent)] px-5 py-3 font-serif text-sm font-semibold text-[#1a1a16] transition hover:bg-[color:var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-70"
                     onClick={() => void handleAddStudentToGroup()}
                     disabled={isSubmittingMemberChange || !selectedCandidateParticipantId}
                   >
@@ -1462,16 +1367,16 @@ export default function DocentePage() {
                   </button>
                 </div>
 
-                <div className="mt-5 overflow-x-auto rounded-2xl border border-white/10 bg-white/5">
+                <div className="mt-5 min-h-0 flex-1 overflow-auto rounded-2xl border border-white/10 bg-white/5 relative">
                   {groupMembers.length === 0 ? (
                     <p className="px-4 py-4 text-sm text-[color:var(--muted)]">Este grupo no tiene alumnos.</p>
                   ) : (
                     <table className="min-w-full text-left text-sm">
-                      <thead>
+                      <thead className="sticky top-0 z-10 bg-[#141a2a]/95 backdrop-blur">
                         <tr className="border-b border-white/10 text-[color:var(--muted)]">
                           <th className="px-4 py-3 font-medium">Alumno</th>
                           <th className="px-4 py-3 font-medium">Username</th>
-                          <th className="px-4 py-3 font-medium">GitHub</th>
+                          <th className="px-4 py-3 font-medium hidden sm:table-cell">GitHub</th>
                           <th className="px-4 py-3 font-medium text-right">Acciones</th>
                         </tr>
                       </thead>
@@ -1480,23 +1385,25 @@ export default function DocentePage() {
                           <tr key={member.participant_id} className="border-b border-white/5 text-white/95 last:border-b-0">
                             <td className="px-4 py-3">{member.nombre}</td>
                             <td className="px-4 py-3">@{member.username}</td>
-                            <td className="px-4 py-3">{member.github_username ? `@${member.github_username}` : "-"}</td>
-                            <td className="px-4 py-3 text-right">
-                              <button
-                                type="button"
-                                className="mr-2 rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-semibold text-white transition hover:border-[color:var(--accent)]/50 hover:bg-white/10"
-                                onClick={() => void openMemberCommitsModal(member)}
-                              >
-                                Commits
-                              </button>
-                              <button
-                                type="button"
-                                className="rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-semibold text-white transition hover:border-red-300/50 hover:text-red-200 disabled:cursor-not-allowed disabled:opacity-70"
-                                onClick={() => void handleRemoveStudentFromGroup(member.participant_id)}
-                                disabled={isSubmittingMemberChange}
-                              >
-                                Quitar
-                              </button>
+                            <td className="px-4 py-3 hidden sm:table-cell">{member.github_username ? `@${member.github_username}` : "-"}</td>
+                            <td className="px-4 py-3">
+                              <div className="flex flex-col items-end justify-end gap-2 sm:flex-row sm:items-center">
+                                <button
+                                  type="button"
+                                  className="w-full whitespace-nowrap rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-semibold text-white transition hover:border-[color:var(--accent)]/50 hover:bg-white/10 sm:w-auto"
+                                  onClick={() => void openMemberCommitsModal(member)}
+                                >
+                                  Commits
+                                </button>
+                                <button
+                                  type="button"
+                                  className="w-full whitespace-nowrap rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-semibold text-white transition hover:border-red-300/50 hover:text-red-200 disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
+                                  onClick={() => void handleRemoveStudentFromGroup(member.participant_id)}
+                                  disabled={isSubmittingMemberChange}
+                                >
+                                  Quitar
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         ))}
@@ -1511,11 +1418,11 @@ export default function DocentePage() {
       ) : null}
 
       {memberCommitsModal ? (
-        <div className="fixed inset-0 z-[73] flex items-center justify-center bg-slate-950/70 px-4">
-          <div className="glass-panel flex max-h-[88vh] w-full max-w-4xl flex-col rounded-[1.8rem] p-7">
-            <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="fixed inset-0 z-[73] flex items-center justify-center bg-[#16160f]/80 px-4 py-6">
+          <div className="glass-panel flex max-h-[90vh] w-full max-w-4xl flex-col rounded-[1.8rem] p-7">
+            <div className="flex shrink-0 flex-wrap items-start justify-between gap-3">
               <div>
-                <h3 className="text-2xl font-semibold text-white">{memberCommitsModal.nombre}</h3>
+                <h3 className="font-serif text-2xl sm:text-3xl font-semibold text-[color:var(--foreground)]">{memberCommitsModal.nombre}</h3>
                 <p className="text-sm text-[color:var(--muted)]">@{memberCommitsModal.username}</p>
               </div>
               <div className="flex gap-2">
@@ -1542,9 +1449,9 @@ export default function DocentePage() {
             ) : memberCommits.length === 0 ? (
               <p className="mt-5 text-sm text-[color:var(--muted)]">Sin commits sincronizados.</p>
             ) : (
-              <div className="mt-5 min-h-0 flex-1 overflow-auto rounded-2xl border border-white/10 bg-white/5">
+              <div className="mt-5 min-h-0 flex-1 overflow-auto rounded-2xl border border-white/10 bg-white/5 relative">
                 <table className="min-w-full text-left text-sm">
-                  <thead>
+                  <thead className="sticky top-0 z-10 bg-[#141a2a]/95 backdrop-blur">
                     <tr className="border-b border-white/10 text-[color:var(--muted)]">
                       <th className="px-4 py-3 font-medium">Fecha</th>
                       <th className="px-4 py-3 font-medium">Repo</th>
@@ -1574,11 +1481,11 @@ export default function DocentePage() {
       ) : null}
 
       {rankingModal ? (
-        <div className="fixed inset-0 z-[74] flex items-center justify-center bg-slate-950/70 px-4">
-          <div className="glass-panel w-full max-w-6xl rounded-[1.8rem] p-7">
-            <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="fixed inset-0 z-[74] flex items-center justify-center bg-[#16160f]/80 px-4 py-6">
+          <div className="glass-panel flex max-h-[90vh] w-full max-w-6xl flex-col rounded-[1.8rem] p-7">
+            <div className="flex shrink-0 flex-wrap items-start justify-between gap-3">
               <div>
-                <h3 className="text-2xl font-semibold text-white">Ranking - {rankingModal.groupName}</h3>
+                <h3 className="font-serif text-2xl sm:text-3xl font-semibold text-[color:var(--foreground)]">Ranking - {rankingModal.groupName}</h3>
                 <p className="text-sm text-[color:var(--muted)]">Escala 0-100 por criterio. Puntos por commits usan regla de 3 con maximo del grupo.</p>
               </div>
               <div className="flex gap-2">
@@ -1605,13 +1512,13 @@ export default function DocentePage() {
             ) : rankingItems.length === 0 ? (
               <p className="mt-5 text-sm text-[color:var(--muted)]">No hay alumnos en este grupo.</p>
             ) : (
-              <div className="mt-5 overflow-x-auto rounded-2xl border border-white/10 bg-white/5">
+              <div className="mt-5 min-h-0 flex-1 overflow-auto rounded-2xl border border-white/10 bg-white/5 relative">
                 <table className="min-w-full text-left text-sm">
-                  <thead>
+                  <thead className="sticky top-0 z-10 bg-[#141a2a]/95 backdrop-blur">
                     <tr className="border-b border-white/10 text-[color:var(--muted)]">
                       <th className="px-4 py-3 font-medium">Ranking</th>
                       <th className="px-4 py-3 font-medium">Estudiante</th>
-                      <th className="px-4 py-3 font-medium">GitHub</th>
+                      <th className="px-4 py-3 font-medium hidden sm:table-cell">GitHub</th>
                       <th className="px-4 py-3 font-medium">Commits</th>
                       <th className="px-4 py-3 font-medium">Puntos commits</th>
                       <th className="px-4 py-3 font-medium">Calif maestro</th>
@@ -1630,7 +1537,7 @@ export default function DocentePage() {
                         <tr key={item.usuario_id} className="border-b border-white/5 text-white/95 last:border-b-0">
                           <td className="px-4 py-3">#{item.rank}</td>
                           <td className="px-4 py-3">{item.nombre}</td>
-                          <td className="px-4 py-3">
+                          <td className="px-4 py-3 hidden sm:table-cell">
                             {item.github_username ? (
                               <a
                                 className="text-[color:var(--accent)] hover:underline"
@@ -1652,7 +1559,7 @@ export default function DocentePage() {
                               min="0"
                               max="100"
                               step="0.01"
-                              className="w-24 rounded-lg border border-white/10 bg-slate-950/40 px-2 py-1 text-white"
+                              className="w-20 sm:w-24 rounded-lg border border-white/10 bg-[#16160f]/40 px-2 py-1 text-white"
                               value={draft.docente}
                               onChange={(event) =>
                                 setRankingDrafts((current) => ({
@@ -1671,7 +1578,7 @@ export default function DocentePage() {
                               min="0"
                               max="100"
                               step="0.01"
-                              className="w-24 rounded-lg border border-white/10 bg-slate-950/40 px-2 py-1 text-white"
+                              className="w-20 sm:w-24 rounded-lg border border-white/10 bg-[#16160f]/40 px-2 py-1 text-white"
                               value={draft.proyecto}
                               onChange={(event) =>
                                 setRankingDrafts((current) => ({
@@ -1688,7 +1595,7 @@ export default function DocentePage() {
                           <td className="px-4 py-3 text-right">
                             <button
                               type="button"
-                              className="rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-semibold text-white transition hover:border-[color:var(--accent)]/50 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-70"
+                              className="rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-semibold text-white transition hover:border-[color:var(--accent)]/50 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-70 whitespace-nowrap"
                               onClick={() => void handleSaveRankingGrades(item)}
                               disabled={isSavingRankingGrades === item.usuario_id}
                             >
@@ -1707,11 +1614,11 @@ export default function DocentePage() {
       ) : null}
 
       {isNotificationsOpen ? (
-        <div className="fixed inset-0 z-[72] flex items-center justify-center bg-slate-950/70 px-4">
+        <div className="fixed inset-0 z-[72] flex items-center justify-center bg-[#16160f]/80 px-4">
           <div className="glass-panel w-full max-w-2xl rounded-[1.8rem] p-7">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <h3 className="text-2xl font-semibold text-white">Invitaciones</h3>
+                <h3 className="font-serif text-2xl sm:text-3xl font-semibold text-[color:var(--foreground)]">Invitaciones</h3>
                 <p className="mt-1 text-sm text-[color:var(--muted)]">{isLoadingInvites ? "Cargando..." : `Pendientes: ${inviteNotifications.length}`}</p>
               </div>
               <button
@@ -1744,6 +1651,119 @@ export default function DocentePage() {
               </div>
             ) : (
               <p className="mt-5 text-sm text-[color:var(--muted)]">Sin invitaciones pendientes.</p>
+            )}
+          </div>
+        </div>
+      ) : null}
+
+      {isGeneralRankingModalOpen ? (
+        <div className="fixed inset-0 z-[75] flex items-center justify-center bg-[#16160f]/80 px-4">
+          <div className="glass-panel w-full max-w-6xl rounded-[1.8rem] p-7 flex max-h-[90vh] flex-col">
+            <div className="flex flex-wrap items-start justify-between gap-3 shrink-0">
+              <div>
+                <h3 className="font-serif text-2xl sm:text-3xl font-semibold text-[color:var(--foreground)]">Ranking general de tus grupos</h3>
+                <p className="mt-1 text-sm text-[color:var(--muted)]">Filtra por metrica y periodo usando solo los grupos visibles ahora.</p>
+              </div>
+              <div className="flex items-center gap-4">
+                <p className="text-sm text-[color:var(--accent)]">Alumnos: {generalRankingItems.length}</p>
+                <button
+                  type="button"
+                  className="rounded-full border border-white/10 px-3 py-1 text-sm text-[color:var(--muted)] transition hover:border-white/20 hover:text-white"
+                  onClick={() => setIsGeneralRankingModalOpen(false)}
+                >
+                  Cerrar
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-6 grid gap-3 pb-4 md:grid-cols-[0.9fr_0.9fr_0.9fr_0.9fr] shrink-0 border-b border-white/10">
+              <select
+                className="rounded-xl border border-white/10 bg-white/6 px-4 py-3 text-sm text-white outline-none focus:border-[color:var(--accent)]/40"
+                value={generalRankingMetric}
+                onChange={(event) => setGeneralRankingMetric(event.target.value as "todo" | "commits" | "contribuciones")}
+              >
+                <option value="todo" className="bg-[#1a1a16] text-white">Todo</option>
+                <option value="commits" className="bg-[#1a1a16] text-white">Commits</option>
+                <option value="contribuciones" className="bg-[#1a1a16] text-white">Contribuciones GitHub</option>
+              </select>
+              <select
+                className="rounded-xl border border-white/10 bg-white/6 px-4 py-3 text-sm text-white outline-none focus:border-[color:var(--accent)]/40"
+                value={generalRankingPeriod}
+                onChange={(event) => setGeneralRankingPeriod(event.target.value as "7d" | "30d" | "90d" | "1y" | "all" | "custom")}
+              >
+                <option value="7d" className="bg-[#1a1a16] text-white">Ultimos 7 dias</option>
+                <option value="30d" className="bg-[#1a1a16] text-white">Ultimos 30 dias</option>
+                <option value="90d" className="bg-[#1a1a16] text-white">Ultimos 90 dias</option>
+                <option value="1y" className="bg-[#1a1a16] text-white">Ultimo anio</option>
+                <option value="all" className="bg-[#1a1a16] text-white">Todo</option>
+                <option value="custom" className="bg-[#1a1a16] text-white">Rango personalizado</option>
+              </select>
+              <input
+                type="date"
+                className="rounded-xl border border-white/10 bg-white/6 px-4 py-3 text-sm text-white outline-none focus:border-[color:var(--accent)]/40 disabled:opacity-40"
+                value={generalRankingFromDate}
+                onChange={(event) => setGeneralRankingFromDate(event.target.value)}
+                disabled={generalRankingPeriod !== "custom"}
+              />
+              <input
+                type="date"
+                className="rounded-xl border border-white/10 bg-white/6 px-4 py-3 text-sm text-white outline-none focus:border-[color:var(--accent)]/40 disabled:opacity-40"
+                value={generalRankingToDate}
+                onChange={(event) => setGeneralRankingToDate(event.target.value)}
+                disabled={generalRankingPeriod !== "custom"}
+              />
+            </div>
+
+            {isLoadingGeneralRanking ? (
+              <p className="mt-4 text-sm text-[color:var(--muted)]">Cargando ranking general...</p>
+            ) : generalRankingItems.length === 0 ? (
+              <p className="mt-4 text-sm text-[color:var(--muted)]">No hay alumnos suficientes para construir el ranking general.</p>
+            ) : (
+              <div className="mt-4 min-h-0 flex-1 overflow-auto rounded-2xl border border-white/10 bg-white/5">
+                <table className="min-w-full text-left text-sm">
+                  <thead>
+                    <tr className="border-b border-white/10 text-[color:var(--muted)]">
+                      <th className="px-4 py-3 font-medium">Ranking</th>
+                      <th className="px-4 py-3 font-medium">Alumno</th>
+                      <th className="px-4 py-3 font-medium">GitHub</th>
+                      <th className="px-4 py-3 font-medium">Grupo</th>
+                      <th className="px-4 py-3 font-medium">{generalMetricLabel}</th>
+                      <th className="px-4 py-3 font-medium">Puntos metrica</th>
+                      <th className="px-4 py-3 font-medium">Calif maestro</th>
+                      <th className="px-4 py-3 font-medium">Calif proyecto</th>
+                      <th className="px-4 py-3 font-medium">{generalRankingMetric === "todo" ? "Promedio" : "Score"}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {generalRankingItems.map((item) => (
+                      <tr key={`${item.group_id}-${item.usuario_id}`} className="border-b border-white/5 text-white/95 last:border-b-0">
+                        <td className="px-4 py-3">#{item.rank}</td>
+                        <td className="px-4 py-3">{item.nombre}</td>
+                        <td className="px-4 py-3">
+                          {item.github_username ? (
+                            <a
+                              className="text-[color:var(--accent)] hover:underline"
+                              href={`https://github.com/${item.github_username}`}
+                              target="_blank"
+                              rel="noreferrer"
+                            >
+                              @{item.github_username}
+                            </a>
+                          ) : (
+                            "-"
+                          )}
+                        </td>
+                        <td className="px-4 py-3">{item.group_name}</td>
+                        <td className="px-4 py-3">{item.metric_value}</td>
+                        <td className="px-4 py-3">{item.metric_points.toFixed(2)}</td>
+                        <td className="px-4 py-3">{item.docente_grade.toFixed(2)}</td>
+                        <td className="px-4 py-3">{item.proyecto_grade.toFixed(2)}</td>
+                        <td className="px-4 py-3 font-semibold">{item.total_score.toFixed(2)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
         </div>
