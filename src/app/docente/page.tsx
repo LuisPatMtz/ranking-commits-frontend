@@ -53,8 +53,7 @@ type MemberCommitsModalState = {
 type RankingDraftMap = Record<
   number,
   {
-    docente: string;
-    proyecto: string;
+    star_rating: number;
   }
 >;
 
@@ -468,6 +467,8 @@ export default function DocentePage() {
       setIsSubmittingMemberEdit(false);
     }
   }
+
+  async function handleCreateParticipant(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setIsSubmittingStudent(true);
     setFeedback("Registrando participante...");
@@ -804,8 +805,7 @@ export default function DocentePage() {
     setRankingDrafts(
       items.reduce<RankingDraftMap>((acc, item) => {
         acc[item.usuario_id] = {
-          docente: String(item.docente_grade),
-          proyecto: String(item.proyecto_grade),
+          star_rating: item.star_rating,
         };
         return acc;
       }, {}),
@@ -830,34 +830,31 @@ export default function DocentePage() {
     }
   }
 
-  async function handleSaveRankingGrades(item: GroupRankingItem) {
+  async function handleSaveStarRating(item: GroupRankingItem, newRating: number) {
     if (!accessToken || !rankingModal) {
       setFeedback("Tu sesion no es valida. Inicia sesion nuevamente.");
       return;
     }
 
-    const draft = rankingDrafts[item.usuario_id];
-    const docenteValue = Number(draft?.docente ?? item.docente_grade);
-    const proyectoValue = Number(draft?.proyecto ?? item.proyecto_grade);
+    const rating = Math.min(5, Math.max(0.5, Math.round(newRating * 2) / 2));
 
-    if (Number.isNaN(docenteValue) || Number.isNaN(proyectoValue)) {
-      setFeedback("Ingresa calificaciones numericas validas.");
-      return;
-    }
+    setRankingDrafts((current) => ({
+      ...current,
+      [item.usuario_id]: { star_rating: rating },
+    }));
 
     const payload: GroupRankingGradesUpdatePayload = {
       usuario_id: item.usuario_id,
-      docente_grade: Math.min(100, Math.max(0, docenteValue)),
-      proyecto_grade: Math.min(100, Math.max(0, proyectoValue)),
+      star_rating: rating,
     };
 
     setIsSavingRankingGrades(item.usuario_id);
     try {
       await apiPut<{ message: string }>(`/ranking/grupo/${rankingModal.groupId}/calificaciones`, payload, accessToken);
       await loadGroupRanking(rankingModal.groupId, accessToken);
-      setFeedback(`Calificaciones actualizadas para ${item.nombre}.`);
+      setFeedback(`Calificacion actualizada para ${item.nombre}: ${rating} ⭐`);
     } catch (error) {
-      setFeedback(error instanceof ApiError ? error.detail : "No se pudieron actualizar las calificaciones.");
+      setFeedback(error instanceof ApiError ? error.detail : "No se pudo actualizar la calificacion.");
     } finally {
       setIsSavingRankingGrades(null);
     }
@@ -1786,23 +1783,20 @@ export default function DocentePage() {
                       <th className="px-4 py-3 font-medium">Estudiante</th>
                       <th className="px-4 py-3 font-medium hidden sm:table-cell">GitHub</th>
                       <th className="px-4 py-3 font-medium">Commits</th>
-                      <th className="px-4 py-3 font-medium">Puntos commits</th>
-                      <th className="px-4 py-3 font-medium">Calif maestro</th>
-                      <th className="px-4 py-3 font-medium">Calif proyecto</th>
+                      <th className="px-4 py-3 font-medium">Pts commits</th>
+                      <th className="px-4 py-3 font-medium">🔥 Racha</th>
+                      <th className="px-4 py-3 font-medium">⭐ Estrellas</th>
                       <th className="px-4 py-3 font-medium">Promedio</th>
-                      <th className="px-4 py-3 font-medium text-right">Guardar</th>
                     </tr>
                   </thead>
                   <tbody>
                     {rankingItems.map((item) => {
-                      const draft = rankingDrafts[item.usuario_id] ?? {
-                        docente: String(item.docente_grade),
-                        proyecto: String(item.proyecto_grade),
-                      };
+                      const currentRating = rankingDrafts[item.usuario_id]?.star_rating ?? item.star_rating;
+                      const isSaving = isSavingRankingGrades === item.usuario_id;
                       return (
                         <tr key={item.usuario_id} className="border-b border-white/5 text-white/95 last:border-b-0">
-                          <td className="px-4 py-3">#{item.rank}</td>
-                          <td className="px-4 py-3">{item.nombre}</td>
+                          <td className="px-4 py-3 font-mono text-xs text-[color:var(--accent)]">#{item.rank}</td>
+                          <td className="px-4 py-3 font-medium">{item.nombre}</td>
                           <td className="px-4 py-3 hidden sm:table-cell">
                             {item.github_username ? (
                               <a
@@ -1820,54 +1814,61 @@ export default function DocentePage() {
                           <td className="px-4 py-3">{item.commits_count}</td>
                           <td className="px-4 py-3">{item.commits_points.toFixed(2)}</td>
                           <td className="px-4 py-3">
-                            <input
-                              type="number"
-                              min="0"
-                              max="100"
-                              step="0.01"
-                              className="w-20 sm:w-24 rounded-lg border border-white/10 bg-[#16160f]/40 px-2 py-1 text-white"
-                              value={draft.docente}
-                              onChange={(event) =>
-                                setRankingDrafts((current) => ({
-                                  ...current,
-                                  [item.usuario_id]: {
-                                    docente: event.target.value,
-                                    proyecto: current[item.usuario_id]?.proyecto ?? String(item.proyecto_grade),
-                                  },
-                                }))
-                              }
-                            />
+                            <span className="inline-flex items-center gap-1 rounded-full bg-orange-500/10 px-3 py-1 text-xs font-semibold text-orange-300">
+                              🔥 {item.streak_days}d
+                            </span>
                           </td>
                           <td className="px-4 py-3">
-                            <input
-                              type="number"
-                              min="0"
-                              max="100"
-                              step="0.01"
-                              className="w-20 sm:w-24 rounded-lg border border-white/10 bg-[#16160f]/40 px-2 py-1 text-white"
-                              value={draft.proyecto}
-                              onChange={(event) =>
-                                setRankingDrafts((current) => ({
-                                  ...current,
-                                  [item.usuario_id]: {
-                                    docente: current[item.usuario_id]?.docente ?? String(item.docente_grade),
-                                    proyecto: event.target.value,
-                                  },
-                                }))
-                              }
-                            />
+                            <div className="flex items-center gap-0.5" aria-label={`Calificacion: ${currentRating} estrellas`}>
+                              {[1, 2, 3, 4, 5].map((star) => {
+                                const fullFilled = currentRating >= star;
+                                const halfFilled = !fullFilled && currentRating >= star - 0.5;
+                                return (
+                                  <span key={star} className="relative inline-flex h-6 w-6">
+                                    {/* Left half — half star */}
+                                    <button
+                                      type="button"
+                                      aria-label={`${star - 0.5} estrellas`}
+                                      disabled={isSaving}
+                                      className="absolute left-0 top-0 h-full w-1/2 z-10 cursor-pointer disabled:cursor-not-allowed"
+                                      onClick={() => void handleSaveStarRating(item, star - 0.5)}
+                                    />
+                                    {/* Right half — full star */}
+                                    <button
+                                      type="button"
+                                      aria-label={`${star} estrellas`}
+                                      disabled={isSaving}
+                                      className="absolute right-0 top-0 h-full w-1/2 z-10 cursor-pointer disabled:cursor-not-allowed"
+                                      onClick={() => void handleSaveStarRating(item, star)}
+                                    />
+                                    <svg
+                                      viewBox="0 0 24 24"
+                                      className="h-6 w-6 select-none"
+                                      aria-hidden="true"
+                                    >
+                                      <defs>
+                                        <linearGradient id={`star-grad-${item.usuario_id}-${star}`}>
+                                          <stop offset={halfFilled ? "50%" : fullFilled ? "100%" : "0%"} stopColor="#f59e0b" />
+                                          <stop offset={halfFilled ? "50%" : fullFilled ? "100%" : "0%"} stopColor="#ffffff20" />
+                                        </linearGradient>
+                                      </defs>
+                                      <path
+                                        d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
+                                        fill={`url(#star-grad-${item.usuario_id}-${star})`}
+                                        stroke={fullFilled || halfFilled ? "#f59e0b" : "#ffffff30"}
+                                        strokeWidth="1.2"
+                                      />
+                                    </svg>
+                                  </span>
+                                );
+                              })}
+                              <span className="ml-1 text-xs text-[color:var(--muted)]">
+                                {currentRating > 0 ? currentRating.toFixed(1) : "—"}
+                              </span>
+                              {isSaving && <span className="ml-1 text-[10px] text-[color:var(--accent)]">...</span>}
+                            </div>
                           </td>
                           <td className="px-4 py-3 font-semibold">{item.promedio.toFixed(2)}</td>
-                          <td className="px-4 py-3 text-right">
-                            <button
-                              type="button"
-                              className="rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-semibold text-white transition hover:border-[color:var(--accent)]/50 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-70 whitespace-nowrap"
-                              onClick={() => void handleSaveRankingGrades(item)}
-                              disabled={isSavingRankingGrades === item.usuario_id}
-                            >
-                              {isSavingRankingGrades === item.usuario_id ? "Guardando..." : "Guardar"}
-                            </button>
-                          </td>
                         </tr>
                       );
                     })}
@@ -1994,16 +1995,16 @@ export default function DocentePage() {
                       <th className="px-4 py-3 font-medium">GitHub</th>
                       <th className="px-4 py-3 font-medium">Grupo</th>
                       <th className="px-4 py-3 font-medium">{generalMetricLabel}</th>
-                      <th className="px-4 py-3 font-medium">Puntos metrica</th>
-                      <th className="px-4 py-3 font-medium">Calif maestro</th>
-                      <th className="px-4 py-3 font-medium">Calif proyecto</th>
+                      <th className="px-4 py-3 font-medium">Puntos</th>
+                      <th className="px-4 py-3 font-medium">🔥 Racha</th>
+                      <th className="px-4 py-3 font-medium">⭐ Calif</th>
                       <th className="px-4 py-3 font-medium">{generalRankingMetric === "todo" ? "Promedio" : "Score"}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {generalRankingItems.map((item) => (
                       <tr key={`${item.group_id}-${item.usuario_id}`} className="border-b border-white/5 text-white/95 last:border-b-0">
-                        <td className="px-4 py-3">#{item.rank}</td>
+                        <td className="px-4 py-3 font-mono text-xs text-[color:var(--accent)]">#{item.rank}</td>
                         <td className="px-4 py-3">{item.nombre}</td>
                         <td className="px-4 py-3">
                           {item.github_username ? (
@@ -2022,8 +2023,16 @@ export default function DocentePage() {
                         <td className="px-4 py-3">{item.group_name}</td>
                         <td className="px-4 py-3">{item.metric_value}</td>
                         <td className="px-4 py-3">{item.metric_points.toFixed(2)}</td>
-                        <td className="px-4 py-3">{item.docente_grade.toFixed(2)}</td>
-                        <td className="px-4 py-3">{item.proyecto_grade.toFixed(2)}</td>
+                        <td className="px-4 py-3">
+                          <span className="inline-flex items-center gap-1 rounded-full bg-orange-500/10 px-2 py-0.5 text-xs font-semibold text-orange-300">
+                            🔥 {item.streak_days}d
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="inline-flex items-center gap-1 text-amber-400">
+                            ★ {item.star_rating > 0 ? item.star_rating.toFixed(1) : "—"}
+                          </span>
+                        </td>
                         <td className="px-4 py-3 font-semibold">{item.total_score.toFixed(2)}</td>
                       </tr>
                     ))}

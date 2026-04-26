@@ -4,13 +4,19 @@ import type { RankingItem } from "@/types";
 
 const mockItems: RankingItem[] = [
   {
+    rank: 1,
+    group_id: 1,
+    group_name: "A-2026",
     usuario_id: 1,
     nombre: "Alumno Demo",
-    grupo: "A-2026",
-    puntos_commits: 220,
-    puntos_docente: 80,
-    puntos_proyecto: 90,
-    total: 390,
+    github_username: "alumno_demo",
+    commits_count: 220,
+    contributions_count: 180,
+    metric_value: 220,
+    metric_points: 100,
+    streak_days: 14,
+    star_rating: 4.5,
+    total_score: 87.5,
   },
 ];
 
@@ -24,14 +30,14 @@ export default function RankingPage() {
             Visualiza desempeno academico con lectura ejecutiva y desglose accionable.
           </h2>
           <p className="mt-4 max-w-2xl text-[color:var(--muted)]">
-            El ranking combina actividad valida en GitHub, criterio docente y relevancia de proyecto para evitar lecturas superficiales.
+            El ranking combina actividad valida en GitHub, dias de racha y la calificacion por estrellas de la comunidad.
           </p>
         </article>
         <article className="glass-panel rounded-[1.8rem] p-7">
-          <p className="font-mono text-xs uppercase tracking-[0.24em] text-[color:var(--warm)]">Snapshot</p>
+          <p className="font-mono text-xs uppercase tracking-[0.22em] text-[color:var(--warm)]">Snapshot</p>
           <div className="mt-5 grid grid-cols-2 gap-4">
             <div>
-              <p className="text-4xl font-semibold tracking-[-0.04em] text-white">390</p>
+              <p className="text-4xl font-semibold tracking-[-0.04em] text-white">87.5</p>
               <p className="text-sm text-[color:var(--muted)]">top score actual</p>
             </div>
             <div>

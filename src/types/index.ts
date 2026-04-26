@@ -123,15 +123,14 @@ export interface GroupRankingItem {
   github_username?: string | null;
   commits_count: number;
   commits_points: number;
-  docente_grade: number;
-  proyecto_grade: number;
+  streak_days: number;
+  star_rating: number;
   promedio: number;
 }
 
 export interface GroupRankingGradesUpdatePayload {
   usuario_id: number;
-  docente_grade?: number;
-  proyecto_grade?: number;
+  star_rating: number;
 }
 
 export interface GeneralRankingItem {
@@ -145,7 +144,10 @@ export interface GeneralRankingItem {
   contributions_count: number;
   metric_value: number;
   metric_points: number;
-  docente_grade: number;
-  proyecto_grade: number;
+  streak_days: number;
+  star_rating: number;
   total_score: number;
 }
+
+/** Alias para compatibilidad con ranking-table y ranking/page */
+export type RankingItem = GeneralRankingItem;
