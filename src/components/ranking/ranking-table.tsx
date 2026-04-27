@@ -15,7 +15,7 @@ export function RankingTable({ items }: RankingTableProps) {
             <th className="px-4 py-3">Grupo</th>
             <th className="px-4 py-3">Commits</th>
             <th className="px-4 py-3">🔥 Racha</th>
-            <th className="px-4 py-3">⭐ Calif</th>
+            <th className="px-4 py-3">Nota Doc.</th>
             <th className="px-4 py-3">Score</th>
           </tr>
         </thead>
@@ -27,13 +27,13 @@ export function RankingTable({ items }: RankingTableProps) {
               <td className="px-4 py-4 text-[color:var(--muted)]">{item.group_name}</td>
               <td className="px-4 py-4">{item.commits_count}</td>
               <td className="px-4 py-4">
-                <span className="inline-flex items-center gap-1 rounded-full bg-orange-500/10 px-2 py-0.5 text-xs font-semibold text-orange-300">
-                  🔥 {item.streak_days}d
+                <span className={item.streak_days > 0 ? "font-medium text-orange-400" : "text-[color:var(--muted)]"}>
+                  {item.streak_days > 0 ? `🔥 ${item.streak_days}d` : "—"}
                 </span>
               </td>
               <td className="px-4 py-4">
                 <span className="inline-flex items-center gap-1 text-amber-400">
-                  ★ {item.star_rating > 0 ? item.star_rating.toFixed(1) : "—"}
+                  {item.docente_grade > 0 ? item.docente_grade.toFixed(1) : "—"}
                 </span>
               </td>
               <td className="px-4 py-4">

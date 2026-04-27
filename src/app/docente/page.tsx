@@ -54,7 +54,6 @@ type RankingDraftMap = Record<
   number,
   {
     docente_grade: number;
-    proyecto_grade: number;
   }
 >;
 
@@ -843,7 +842,6 @@ export default function DocentePage() {
       items.reduce<RankingDraftMap>((acc, item) => {
         acc[item.usuario_id] = {
           docente_grade: item.docente_grade,
-          proyecto_grade: item.proyecto_grade,
         };
         return acc;
       }, {}),
@@ -891,33 +889,6 @@ export default function DocentePage() {
       setFeedback(`Nota docente actualizada para ${item.nombre}: ${docente_grade}/100`);
     } catch (error) {
       setFeedback(error instanceof ApiError ? error.detail : "No se pudo actualizar la calificacion.");
-    } finally {
-      setIsSavingRankingGrades(null);
-    }
-  }
-
-  async function handleSaveProyectoGrade(item: GroupRankingItem, value: number) {
-    if (!accessToken || !rankingModal) {
-      setFeedback("Tu sesion no es valida. Inicia sesion nuevamente.");
-      return;
-    }
-
-    const proyecto_grade = Math.round(Math.min(100, Math.max(0, value)));
-
-    setRankingDrafts((current) => ({
-      ...current,
-      [item.usuario_id]: { ...current[item.usuario_id], proyecto_grade },
-    }));
-
-    const payload: GroupRankingGradesUpdatePayload = { usuario_id: item.usuario_id, proyecto_grade };
-
-    setIsSavingRankingGrades(item.usuario_id);
-    try {
-      await apiPut<{ message: string }>(`/ranking/grupo/${rankingModal.groupId}/calificaciones`, payload, accessToken);
-      await loadGroupRanking(rankingModal.groupId, accessToken);
-      setFeedback(`Nota proyecto actualizada para ${item.nombre}: ${proyecto_grade}/100`);
-    } catch (error) {
-      setFeedback(error instanceof ApiError ? error.detail : "No se pudo actualizar la nota de proyecto.");
     } finally {
       setIsSavingRankingGrades(null);
     }
@@ -1187,6 +1158,16 @@ export default function DocentePage() {
                             }}
                           >
                             Invitar alumnos
+                          </button>
+                          <button
+                            type="button"
+                            className="block w-full px-4 py-2 text-left text-sm text-white transition hover:bg-white/10"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              void togglePeerVoting(group);
+                            }}
+                          >
+                            {group.peer_voting_enabled ? "Desactivar votaciones ★" : "Activar votaciones ★"}
                           </button>
                         </div>
                       ) : null}
@@ -1917,7 +1898,7 @@ export default function DocentePage() {
                           <th className="px-4 py-3 font-medium">Commits</th>
                           <th className="px-4 py-3 font-medium">Pts commits</th>
                           <th className="px-4 py-3 font-medium">Nota docente</th>
-                          <th className="px-4 py-3 font-medium">Nota proyecto</th>
+                          <th className="px-4 py-3 font-medium">🔥 Racha</th>
                           {showPeerVote ? <th className="px-4 py-3 font-medium">Peer vote</th> : null}
                           <th className="px-4 py-3 font-medium">Promedio</th>
                         </tr>
@@ -1925,7 +1906,6 @@ export default function DocentePage() {
                       <tbody>
                         {rankingItems.map((item) => {
                           const docenteGrade = rankingDrafts[item.usuario_id]?.docente_grade ?? item.docente_grade;
-                          const proyectoGrade = rankingDrafts[item.usuario_id]?.proyecto_grade ?? item.proyecto_grade;
                           const currentStars = docenteGrade / 20;
                           const isSaving = isSavingRankingGrades === item.usuario_id;
                           return (
@@ -1993,21 +1973,9 @@ export default function DocentePage() {
                                 </div>
                               </td>
                               <td className="px-4 py-3">
-                                <input
-                                  type="number"
-                                  min="0"
-                                  max="100"
-                                  disabled={isSaving}
-                                  className="w-20 rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-sm text-white outline-none focus:border-[color:var(--accent)]/40 disabled:opacity-50"
-                                  value={proyectoGrade}
-                                  onChange={(e) =>
-                                    setRankingDrafts((cur) => ({
-                                      ...cur,
-                                      [item.usuario_id]: { ...cur[item.usuario_id], proyecto_grade: Number(e.target.value) },
-                                    }))
-                                  }
-                                  onBlur={() => void handleSaveProyectoGrade(item, proyectoGrade)}
-                                />
+                                <span className={item.streak_days > 0 ? "font-medium text-orange-400" : "text-[color:var(--muted)]"}>
+                                  {item.streak_days > 0 ? `🔥 ${item.streak_days}d` : "—"}
+                                </span>
                               </td>
                               {showPeerVote ? (
                                 <td className="px-4 py-3">

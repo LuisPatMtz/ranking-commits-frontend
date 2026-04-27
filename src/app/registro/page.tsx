@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 
+import { saveAuthSession, resolveDashboardPath, type AuthSession } from "@/features/auth/session";
 import { ApiError, apiGet, apiPost } from "@/lib/api";
 
 type InviteInfo = {
@@ -21,6 +22,7 @@ type RegisterResponse = {
 };
 
 function RegistroForm() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const inviteToken = searchParams.get("invite") ?? "";
   const tipo = (searchParams.get("tipo") ?? "") as "docente" | "alumno" | "";
@@ -54,29 +56,24 @@ function RegistroForm() {
 
     try {
       if (tipo === "docente") {
-        const res = await apiPost<RegisterResponse>("/auth/register/docente", {
+        await apiPost<RegisterResponse>("/auth/register/docente", {
           invite_token: inviteToken,
           nombre,
           username,
           password,
         });
-        setSuccessMessage(`Cuenta docente creada: @${res.username}. Ya puedes iniciar sesión.`);
       } else {
-        const res = await apiPost<RegisterResponse>("/auth/register/alumno", {
+        await apiPost<RegisterResponse>("/auth/register/alumno", {
           invite_token: inviteToken,
           nombre,
           username,
           password,
           github_username: githubUsername.trim(),
         });
-        setSuccessMessage(
-          `Cuenta creada: @${res.username}. Ya estás en el grupo. Puedes iniciar sesión.`
-        );
       }
-      setNombre("");
-      setUsername("");
-      setPassword("");
-      setGithubUsername("");
+      const sessionData = await apiPost<AuthSession>("/auth/login", { username, password });
+      saveAuthSession(sessionData);
+      router.push(resolveDashboardPath(sessionData.user.rol));
     } catch (err) {
       setErrorMessage(err instanceof ApiError ? err.detail : "Error al crear la cuenta.");
     } finally {

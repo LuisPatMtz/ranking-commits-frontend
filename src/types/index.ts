@@ -125,7 +125,8 @@ export interface GroupRankingItem {
   commits_count: number;
   commits_points: number;
   docente_grade: number;
-  proyecto_grade: number;
+  streak_days: number;
+  streak_points: number;
   peer_vote_avg: number;
   peer_vote_points: number;
   promedio: number;
@@ -134,7 +135,14 @@ export interface GroupRankingItem {
 export interface GroupRankingGradesUpdatePayload {
   usuario_id: number;
   docente_grade?: number | null;
-  proyecto_grade?: number | null;
+}
+
+export interface VotoRecibidoOut {
+  id: number;
+  votante_id: number;
+  votante_nombre: string;
+  estrellas: number;
+  periodo: string;
 }
 
 export interface PeerVoteOut {
@@ -177,7 +185,8 @@ export interface GeneralRankingItem {
   metric_value: number;
   metric_points: number;
   docente_grade: number;
-  proyecto_grade: number;
+  streak_days: number;
+  streak_points: number;
   total_score: number;
 }
 

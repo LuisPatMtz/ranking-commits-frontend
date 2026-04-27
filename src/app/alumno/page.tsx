@@ -1,14 +1,252 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
+import { readAuthSession } from "@/features/auth/session";
+import { ApiError, apiGet, apiPost } from "@/lib/api";
+import type { CompañeroVotable, MiPerfilAlumno, PeerVoteOut, VotoRecibidoOut } from "@/types";
+
+function StarSelector({
+  value,
+  onChange,
+}: {
+  value: number | null;
+  onChange: (stars: number) => void;
+}) {
+  const [hovered, setHovered] = useState<number | null>(null);
+  const display = hovered ?? value ?? 0;
+
+  return (
+    <div className="flex gap-0.5">
+      {[1, 2, 3, 4, 5].map((star) => (
+        <button
+          key={star}
+          type="button"
+          onClick={() => onChange(star)}
+          onMouseEnter={() => setHovered(star)}
+          onMouseLeave={() => setHovered(null)}
+          className={`text-xl transition-colors ${display >= star ? "text-amber-400" : "text-slate-600"}`}
+          aria-label={`${star} estrella${star > 1 ? "s" : ""}`}
+        >
+          ★
+        </button>
+      ))}
+    </div>
+  );
+}
 
 export default function AlumnoPage() {
+  const [token, setToken] = useState<string | null>(null);
+  const [perfil, setPerfil] = useState<MiPerfilAlumno | null>(null);
+  const [companeros, setCompañeros] = useState<CompañeroVotable[]>([]);
+  const [recibidos, setRecibidos] = useState<VotoRecibidoOut[]>([]);
+  const [pendingVotes, setPendingVotes] = useState<Record<number, number>>({});
+  const [submitting, setSubmitting] = useState<Record<number, boolean>>({});
+  const [voteError, setVoteError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const session = readAuthSession();
+    if (!session) return;
+    setToken(session.access_token);
+  }, []);
+
+  useEffect(() => {
+    if (!token) return;
+
+    async function load() {
+      try {
+        const p = await apiGet<MiPerfilAlumno>("/alumnos/mi-perfil", token!);
+        setPerfil(p);
+
+        if (p.grupo_id && p.peer_voting_enabled) {
+          const [comp, rec] = await Promise.all([
+            apiGet<CompañeroVotable[]>(`/grupos/${p.grupo_id}/votos/companeros`, token!),
+            apiGet<VotoRecibidoOut[]>(`/grupos/${p.grupo_id}/votos/recibidos`, token!),
+          ]);
+          setCompañeros(comp);
+          setRecibidos(rec);
+        }
+      } catch (e) {
+        setError(e instanceof ApiError ? e.detail : "Error al cargar el perfil");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    void load();
+  }, [token]);
+
+  async function submitVote(votado_id: number) {
+    if (!perfil?.grupo_id || !token) return;
+    const estrellas = pendingVotes[votado_id];
+    if (!estrellas) return;
+
+    setSubmitting((s) => ({ ...s, [votado_id]: true }));
+    setVoteError(null);
+
+    try {
+      const result = await apiPost<PeerVoteOut>(
+        `/grupos/${perfil.grupo_id}/votos`,
+        { votado_id, estrellas },
+        token,
+      );
+      setCompañeros((prev) =>
+        prev.map((c) => (c.usuario_id === votado_id ? { ...c, mi_voto: result.estrellas } : c)),
+      );
+      setPendingVotes((prev) => {
+        const next = { ...prev };
+        delete next[votado_id];
+        return next;
+      });
+    } catch (e) {
+      setVoteError(e instanceof ApiError ? e.detail : "Error al enviar el voto");
+    } finally {
+      setSubmitting((s) => ({ ...s, [votado_id]: false }));
+    }
+  }
+
+  if (loading) {
+    return (
+      <DashboardShell title="Mi perfil">
+        <p className="text-[color:var(--muted)]">Cargando...</p>
+      </DashboardShell>
+    );
+  }
+
+  if (error) {
+    return (
+      <DashboardShell title="Mi perfil">
+        <p className="text-red-400">{error}</p>
+      </DashboardShell>
+    );
+  }
+
   return (
-    <DashboardShell title="Perfil Alumno">
-      <section className="rounded-lg border border-slate-200 bg-white p-4">
-        <h2 className="font-semibold">Historial de commits</h2>
-        <p className="text-sm text-slate-600">
-          Vista base para mostrar repositorios vinculados y actividad de los ultimos 365 dias.
-        </p>
-      </section>
+    <DashboardShell title="Mi perfil">
+      <div className="space-y-6">
+        {/* Resumen */}
+        <section className="glass-panel rounded-[1.75rem] p-6">
+          <h2 className="mb-4 font-semibold text-[color:var(--accent)]">Resumen</h2>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <Stat label="Nombre" value={perfil?.nombre ?? "—"} />
+            <Stat label="GitHub" value={perfil?.github_username ? `@${perfil.github_username}` : "—"} />
+            <Stat label="Commits" value={String(perfil?.commits_count ?? 0)} />
+            <Stat label="Grupo" value={perfil?.grupo_nombre ?? "Sin grupo"} />
+          </div>
+        </section>
+
+        {/* Votación entre pares */}
+        {perfil?.peer_voting_enabled && perfil.grupo_id && (
+          <section className="glass-panel rounded-[1.75rem] p-6">
+            <h2 className="mb-1 font-semibold text-[color:var(--accent)]">Vota a tus compañeros</h2>
+            <p className="mb-4 text-xs text-[color:var(--muted)]">
+              Periodo actual: {new Date().toISOString().slice(0, 7)} &mdash; un voto por compañero por mes.
+            </p>
+
+            {voteError && (
+              <p className="mb-3 rounded-lg bg-red-500/10 px-4 py-2 text-sm text-red-400">{voteError}</p>
+            )}
+
+            {companeros.length === 0 ? (
+              <p className="text-sm text-[color:var(--muted)]">No hay compañeros en tu grupo todavía.</p>
+            ) : (
+              <ul className="space-y-3">
+                {companeros.map((c) => {
+                  const selected = pendingVotes[c.usuario_id] ?? null;
+                  const isSubmitting = submitting[c.usuario_id] ?? false;
+                  const hasVoted = c.mi_voto != null && selected == null;
+
+                  return (
+                    <li
+                      key={c.usuario_id}
+                      className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/8 bg-white/3 px-4 py-3"
+                    >
+                      <div>
+                        <p className="font-medium">{c.nombre}</p>
+                        {c.github_username && (
+                          <p className="text-xs text-[color:var(--muted)]">@{c.github_username}</p>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        {hasVoted && (
+                          <span className="text-xs text-[color:var(--muted)]">
+                            Votaste: {"★".repeat(c.mi_voto!)}
+                          </span>
+                        )}
+                        <StarSelector
+                          value={selected ?? c.mi_voto ?? null}
+                          onChange={(stars) =>
+                            setPendingVotes((prev) => ({ ...prev, [c.usuario_id]: stars }))
+                          }
+                        />
+                        {selected != null && (
+                          <button
+                            onClick={() => void submitVote(c.usuario_id)}
+                            disabled={isSubmitting}
+                            className="rounded-full bg-[color:var(--accent)] px-3 py-1 text-xs font-semibold text-black transition hover:opacity-80 disabled:opacity-40"
+                          >
+                            {isSubmitting ? "..." : hasVoted ? "Actualizar" : "Votar"}
+                          </button>
+                        )}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </section>
+        )}
+
+        {/* Votos recibidos */}
+        {perfil?.peer_voting_enabled && perfil.grupo_id && (
+          <section className="glass-panel rounded-[1.75rem] p-6">
+            <h2 className="mb-4 font-semibold text-[color:var(--accent)]">Votos que recibi este mes</h2>
+            {recibidos.length === 0 ? (
+              <p className="text-sm text-[color:var(--muted)]">Aun no tienes votos este periodo.</p>
+            ) : (
+              <ul className="space-y-2">
+                {recibidos.map((v) => (
+                  <li
+                    key={v.id}
+                    className="flex items-center justify-between rounded-xl border border-white/8 bg-white/3 px-4 py-3"
+                  >
+                    <span className="font-medium">{v.votante_nombre}</span>
+                    <span className="text-amber-400">{"★".repeat(v.estrellas)}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        )}
+
+        {/* Sin grupo */}
+        {!perfil?.grupo_id && (
+          <section className="rounded-[1.75rem] border border-white/8 bg-white/3 p-6 text-center">
+            <p className="text-[color:var(--muted)]">Aun no estas asignado a ningun grupo.</p>
+          </section>
+        )}
+
+        {/* Voting deshabilitado */}
+        {perfil?.grupo_id && !perfil.peer_voting_enabled && (
+          <section className="rounded-[1.75rem] border border-white/8 bg-white/3 p-6 text-center">
+            <p className="text-sm text-[color:var(--muted)]">
+              Las votaciones entre pares no estan habilitadas en tu grupo.
+            </p>
+          </section>
+        )}
+      </div>
     </DashboardShell>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="mb-1 font-mono text-[10px] uppercase tracking-widest text-[color:var(--muted)]">{label}</p>
+      <p className="font-semibold text-[color:var(--foreground)]">{value}</p>
+    </div>
   );
 }
