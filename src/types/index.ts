@@ -15,6 +15,7 @@ export interface Group {
   carrera: string;
   semestre: number;
   created_by_user_id?: number | null;
+  peer_voting_enabled: boolean;
 }
 
 export interface TeacherShareTarget {
@@ -123,14 +124,45 @@ export interface GroupRankingItem {
   github_username?: string | null;
   commits_count: number;
   commits_points: number;
-  streak_days: number;
-  star_rating: number;
+  docente_grade: number;
+  proyecto_grade: number;
+  peer_vote_avg: number;
+  peer_vote_points: number;
   promedio: number;
 }
 
 export interface GroupRankingGradesUpdatePayload {
   usuario_id: number;
-  star_rating: number;
+  docente_grade?: number | null;
+  proyecto_grade?: number | null;
+}
+
+export interface PeerVoteOut {
+  id: number;
+  votado_id: number;
+  votado_nombre: string;
+  estrellas: number;
+  periodo: string;
+}
+
+export interface CompañeroVotable {
+  usuario_id: number;
+  nombre: string;
+  github_username?: string | null;
+  mi_voto?: number | null;
+}
+
+export interface MiPerfilAlumno {
+  usuario_id: number;
+  nombre: string;
+  github_username?: string | null;
+  github_contributions_total?: number | null;
+  grupo_id?: number | null;
+  grupo_nombre?: string | null;
+  peer_voting_enabled: boolean;
+  mi_rank?: number | null;
+  commits_count: number;
+  promedio: number;
 }
 
 export interface GeneralRankingItem {
@@ -144,8 +176,8 @@ export interface GeneralRankingItem {
   contributions_count: number;
   metric_value: number;
   metric_points: number;
-  streak_days: number;
-  star_rating: number;
+  docente_grade: number;
+  proyecto_grade: number;
   total_score: number;
 }
 

@@ -112,3 +112,23 @@ export async function apiPut<T>(path: string, body: unknown, token?: string): Pr
 
   return response.json() as Promise<T>;
 }
+
+export async function apiPatch<T>(path: string, body: unknown, token?: string): Promise<T> {
+  const response = await fetch(`${API_URL}${path}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      handleUnauthorized(path);
+    }
+    throw new ApiError(response.status, await readErrorDetail(response));
+  }
+
+  return response.json() as Promise<T>;
+}

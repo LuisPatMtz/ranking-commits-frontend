@@ -67,7 +67,7 @@ function RegistroForm() {
           nombre,
           username,
           password,
-          github_username: githubUsername.trim() || null,
+          github_username: githubUsername.trim(),
         });
         setSuccessMessage(
           `Cuenta creada: @${res.username}. Ya estás en el grupo. Puedes iniciar sesión.`
@@ -220,10 +220,10 @@ function RegistroForm() {
             />
             <input
               className="w-full border border-[color:var(--border)] bg-[color:var(--background-muted)] px-4 py-2.5 text-[color:var(--foreground)] outline-none transition placeholder:text-[color:var(--muted)] focus:border-[color:var(--accent)]"
-              placeholder="Nombre de usuario"
+              placeholder="Nombre de usuario (sin espacios)"
               type="text"
               value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              onChange={(e) => setUsername(e.target.value.replace(/\s/g, ""))}
               required
             />
             <input
@@ -238,13 +238,14 @@ function RegistroForm() {
               <div className="space-y-1">
                 <input
                   className="w-full border border-[color:var(--border)] bg-[color:var(--background-muted)] px-4 py-2.5 text-[color:var(--foreground)] outline-none transition placeholder:text-[color:var(--muted)] focus:border-[color:var(--accent)]"
-                  placeholder="Usuario de GitHub (opcional)"
+                  placeholder="Usuario de GitHub"
                   type="text"
                   value={githubUsername}
-                  onChange={(e) => setGithubUsername(e.target.value)}
+                  onChange={(e) => setGithubUsername(e.target.value.replace(/\s/g, ""))}
+                  required
                 />
                 <p className="text-xs text-[color:var(--muted)]">
-                  Recomendado para sincronizar tus commits automáticamente
+                  Necesario para registrar tus commits en el ranking
                 </p>
               </div>
             )}

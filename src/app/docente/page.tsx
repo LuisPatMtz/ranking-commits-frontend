@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { clearAuthSession, readAuthSession } from "@/features/auth/session";
-import { ApiError, apiDelete, apiGet, apiPost, apiPut } from "@/lib/api";
+import { ApiError, apiDelete, apiGet, apiPatch, apiPost, apiPut } from "@/lib/api";
 import type {
   Group,
   GeneralRankingItem,
@@ -53,9 +53,17 @@ type MemberCommitsModalState = {
 type RankingDraftMap = Record<
   number,
   {
-    star_rating: number;
+    docente_grade: number;
+    proyecto_grade: number;
   }
 >;
+
+type StudentInviteModal = {
+  groupId: number;
+  groupName: string;
+  link: string | null;
+  isLoading: boolean;
+} | null;
 
 const initialGroupForm = {
   nombre: "",
@@ -132,6 +140,8 @@ export default function DocentePage() {
   const [isSubmittingMemberEdit, setIsSubmittingMemberEdit] = useState(false);
   const [removeConfirmModal, setRemoveConfirmModal] = useState<{ participantId: number; nombre: string } | null>(null);
   const [isRemovingMember, setIsRemovingMember] = useState(false);
+  const [studentInviteModal, setStudentInviteModal] = useState<StudentInviteModal>(null);
+  const [copiedInviteLink, setCopiedInviteLink] = useState(false);
 
   useEffect(() => {
     const frameId = window.requestAnimationFrame(() => {
@@ -172,6 +182,11 @@ export default function DocentePage() {
         setRemoveConfirmModal(null);
         return;
       }
+      if (studentInviteModal) {
+        setStudentInviteModal(null);
+        setCopiedInviteLink(false);
+        return;
+      }
       if (membersModal) {
         setMembersModal(null);
         setIsCreatingNewCompetitor(false);
@@ -205,7 +220,7 @@ export default function DocentePage() {
     return () => {
       window.removeEventListener("keydown", handleEscapeKey);
     };
-  }, [activeModal, cardMenuGroupId, isNotificationsOpen, memberCommitsModal, membersModal, rankingModal, shareModal, successModal, isGeneralRankingModalOpen, removeConfirmModal]);
+  }, [activeModal, cardMenuGroupId, isNotificationsOpen, memberCommitsModal, membersModal, rankingModal, shareModal, successModal, isGeneralRankingModalOpen, removeConfirmModal, studentInviteModal]);
 
   const availableCarreras = Array.from(new Set(groups.map((group) => group.carrera))).sort((a, b) => a.localeCompare(b));
   const availableSemestres = Array.from(new Set(groups.map((group) => group.semestre))).sort((a, b) => a - b);
@@ -324,7 +339,7 @@ export default function DocentePage() {
     generalRankingToDate,
   ]);
 
-  async function handleSubmitGroup(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmitGroup(event: { preventDefault(): void }) {
     event.preventDefault();
     setIsSubmittingGroup(true);
     setFeedback(editingGroup ? "Actualizando grupo..." : "Creando grupo...");
@@ -385,16 +400,29 @@ export default function DocentePage() {
     setActiveModal("group");
   }
 
-  function generateRandomUsername(): string {
-    const adjectives = ["swift", "clever", "brave", "smart", "quick", "keen", "agile", "nimble", "sharp", "bright"];
-    const nouns = ["coder", "hacker", "dev", "ninja", "wizard", "sage", "pro", "expert", "master", "hunter"];
-    const adjective = adjectives[Math.floor(Math.random() * adjectives.length)];
-    const noun = nouns[Math.floor(Math.random() * nouns.length)];
-    const number = Math.floor(Math.random() * 9000) + 1000;
-    return `${adjective}_${noun}${number}`;
+  async function openStudentInviteModal(group: Group) {
+    setCardMenuGroupId(null);
+    setStudentInviteModal({ groupId: group.id, groupName: group.nombre, link: null, isLoading: true });
+    try {
+      const res = await apiPost<{ registro_url: string }>(
+        `/grupos/${group.id}/invitar-alumnos`,
+        {},
+        accessToken,
+      );
+      const fullLink = `${window.location.origin}${res.registro_url}`;
+      setStudentInviteModal((prev) => prev ? { ...prev, link: fullLink, isLoading: false } : null);
+    } catch {
+      setStudentInviteModal((prev) => prev ? { ...prev, link: null, isLoading: false } : null);
+    }
   }
 
-  async function handleCreateCompetitorInModal(event: React.FormEvent<HTMLFormElement>) {
+  async function copyInviteLink(link: string) {
+    await navigator.clipboard.writeText(link);
+    setCopiedInviteLink(true);
+    setTimeout(() => setCopiedInviteLink(false), 2500);
+  }
+
+  async function handleCreateCompetitorInModal(event: { preventDefault(): void }) {
     event.preventDefault();
     
     if (!membersModal || !accessToken) {
@@ -475,7 +503,7 @@ export default function DocentePage() {
     }
   }
 
-  async function handleCreateParticipant(event: React.FormEvent<HTMLFormElement>) {
+  async function handleCreateParticipant(event: { preventDefault(): void }) {
     event.preventDefault();
     setIsSubmittingStudent(true);
     setFeedback("Registrando participante...");
@@ -814,7 +842,8 @@ export default function DocentePage() {
     setRankingDrafts(
       items.reduce<RankingDraftMap>((acc, item) => {
         acc[item.usuario_id] = {
-          star_rating: item.star_rating,
+          docente_grade: item.docente_grade,
+          proyecto_grade: item.proyecto_grade,
         };
         return acc;
       }, {}),
@@ -839,33 +868,76 @@ export default function DocentePage() {
     }
   }
 
-  async function handleSaveStarRating(item: GroupRankingItem, newRating: number) {
+  async function handleSaveDocenteGrade(item: GroupRankingItem, starClicked: number) {
     if (!accessToken || !rankingModal) {
       setFeedback("Tu sesion no es valida. Inicia sesion nuevamente.");
       return;
     }
 
-    const rating = Math.min(5, Math.max(0.5, Math.round(newRating * 2) / 2));
+    const stars = Math.min(5, Math.max(0.5, Math.round(starClicked * 2) / 2));
+    const docente_grade = Math.round(stars * 20);
 
     setRankingDrafts((current) => ({
       ...current,
-      [item.usuario_id]: { star_rating: rating },
+      [item.usuario_id]: { ...current[item.usuario_id], docente_grade },
     }));
 
-    const payload: GroupRankingGradesUpdatePayload = {
-      usuario_id: item.usuario_id,
-      star_rating: rating,
-    };
+    const payload: GroupRankingGradesUpdatePayload = { usuario_id: item.usuario_id, docente_grade };
 
     setIsSavingRankingGrades(item.usuario_id);
     try {
       await apiPut<{ message: string }>(`/ranking/grupo/${rankingModal.groupId}/calificaciones`, payload, accessToken);
       await loadGroupRanking(rankingModal.groupId, accessToken);
-      setFeedback(`Calificacion actualizada para ${item.nombre}: ${rating} ⭐`);
+      setFeedback(`Nota docente actualizada para ${item.nombre}: ${docente_grade}/100`);
     } catch (error) {
       setFeedback(error instanceof ApiError ? error.detail : "No se pudo actualizar la calificacion.");
     } finally {
       setIsSavingRankingGrades(null);
+    }
+  }
+
+  async function handleSaveProyectoGrade(item: GroupRankingItem, value: number) {
+    if (!accessToken || !rankingModal) {
+      setFeedback("Tu sesion no es valida. Inicia sesion nuevamente.");
+      return;
+    }
+
+    const proyecto_grade = Math.round(Math.min(100, Math.max(0, value)));
+
+    setRankingDrafts((current) => ({
+      ...current,
+      [item.usuario_id]: { ...current[item.usuario_id], proyecto_grade },
+    }));
+
+    const payload: GroupRankingGradesUpdatePayload = { usuario_id: item.usuario_id, proyecto_grade };
+
+    setIsSavingRankingGrades(item.usuario_id);
+    try {
+      await apiPut<{ message: string }>(`/ranking/grupo/${rankingModal.groupId}/calificaciones`, payload, accessToken);
+      await loadGroupRanking(rankingModal.groupId, accessToken);
+      setFeedback(`Nota proyecto actualizada para ${item.nombre}: ${proyecto_grade}/100`);
+    } catch (error) {
+      setFeedback(error instanceof ApiError ? error.detail : "No se pudo actualizar la nota de proyecto.");
+    } finally {
+      setIsSavingRankingGrades(null);
+    }
+  }
+
+  async function togglePeerVoting(group: Group) {
+    setCardMenuGroupId(null);
+    if (!accessToken) return;
+    try {
+      const result = await apiPatch<{ grupo_id: number; peer_voting_enabled: boolean }>(
+        `/grupos/${group.id}/peer-voting`,
+        {},
+        accessToken,
+      );
+      setGroups((current) =>
+        current.map((g) => (g.id === result.grupo_id ? { ...g, peer_voting_enabled: result.peer_voting_enabled } : g)),
+      );
+      setFeedback(`Votaciones ${result.peer_voting_enabled ? "activadas" : "desactivadas"} para ${group.nombre}`);
+    } catch (error) {
+      setFeedback(error instanceof ApiError ? error.detail : "No se pudo cambiar el estado de votaciones.");
     }
   }
 
@@ -1105,6 +1177,16 @@ export default function DocentePage() {
                             }}
                           >
                             Compartir grupo
+                          </button>
+                          <button
+                            type="button"
+                            className="block w-full px-4 py-2 text-left text-sm text-[color:var(--accent)] transition hover:bg-white/10"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              void openStudentInviteModal(group);
+                            }}
+                          >
+                            Invitar alumnos
                           </button>
                         </div>
                       ) : null}
@@ -1822,104 +1904,126 @@ export default function DocentePage() {
               <p className="mt-5 text-sm text-[color:var(--muted)]">No hay alumnos en este grupo.</p>
             ) : (
               <div className="mt-5 min-h-0 flex-1 overflow-auto rounded-2xl border border-white/10 bg-white/5 relative">
-                <table className="min-w-full text-left text-sm">
-                  <thead className="sticky top-0 z-10 bg-[#141a2a]/95 backdrop-blur">
-                    <tr className="border-b border-white/10 text-[color:var(--muted)]">
-                      <th className="px-4 py-3 font-medium">Ranking</th>
-                      <th className="px-4 py-3 font-medium">Estudiante</th>
-                      <th className="px-4 py-3 font-medium hidden sm:table-cell">GitHub</th>
-                      <th className="px-4 py-3 font-medium">Commits</th>
-                      <th className="px-4 py-3 font-medium">Pts commits</th>
-                      <th className="px-4 py-3 font-medium">🔥 Racha</th>
-                      <th className="px-4 py-3 font-medium">⭐ Estrellas</th>
-                      <th className="px-4 py-3 font-medium">Promedio</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {rankingItems.map((item) => {
-                      const currentRating = rankingDrafts[item.usuario_id]?.star_rating ?? item.star_rating;
-                      const isSaving = isSavingRankingGrades === item.usuario_id;
-                      return (
-                        <tr key={item.usuario_id} className="border-b border-white/5 text-white/95 last:border-b-0">
-                          <td className="px-4 py-3 font-mono text-xs text-[color:var(--accent)]">#{item.rank}</td>
-                          <td className="px-4 py-3 font-medium">{item.nombre}</td>
-                          <td className="px-4 py-3 hidden sm:table-cell">
-                            {item.github_username ? (
-                              <a
-                                className="text-[color:var(--accent)] hover:underline"
-                                href={`https://github.com/${item.github_username}`}
-                                target="_blank"
-                                rel="noreferrer"
-                              >
-                                @{item.github_username}
-                              </a>
-                            ) : (
-                              "-"
-                            )}
-                          </td>
-                          <td className="px-4 py-3">{item.commits_count}</td>
-                          <td className="px-4 py-3">{item.commits_points.toFixed(2)}</td>
-                          <td className="px-4 py-3">
-                            <span className="inline-flex items-center gap-1 rounded-full bg-orange-500/10 px-3 py-1 text-xs font-semibold text-orange-300">
-                              🔥 {item.streak_days}d
-                            </span>
-                          </td>
-                          <td className="px-4 py-3">
-                            <div className="flex items-center gap-0.5" aria-label={`Calificacion: ${currentRating} estrellas`}>
-                              {[1, 2, 3, 4, 5].map((star) => {
-                                const fullFilled = currentRating >= star;
-                                const halfFilled = !fullFilled && currentRating >= star - 0.5;
-                                return (
-                                  <span key={star} className="relative inline-flex h-6 w-6">
-                                    {/* Left half — half star */}
-                                    <button
-                                      type="button"
-                                      aria-label={`${star - 0.5} estrellas`}
-                                      disabled={isSaving}
-                                      className="absolute left-0 top-0 h-full w-1/2 z-10 cursor-pointer disabled:cursor-not-allowed"
-                                      onClick={() => void handleSaveStarRating(item, star - 0.5)}
-                                    />
-                                    {/* Right half — full star */}
-                                    <button
-                                      type="button"
-                                      aria-label={`${star} estrellas`}
-                                      disabled={isSaving}
-                                      className="absolute right-0 top-0 h-full w-1/2 z-10 cursor-pointer disabled:cursor-not-allowed"
-                                      onClick={() => void handleSaveStarRating(item, star)}
-                                    />
-                                    <svg
-                                      viewBox="0 0 24 24"
-                                      className="h-6 w-6 select-none"
-                                      aria-hidden="true"
-                                    >
-                                      <defs>
-                                        <linearGradient id={`star-grad-${item.usuario_id}-${star}`}>
-                                          <stop offset={halfFilled ? "50%" : fullFilled ? "100%" : "0%"} stopColor="#f59e0b" />
-                                          <stop offset={halfFilled ? "50%" : fullFilled ? "100%" : "0%"} stopColor="#ffffff20" />
-                                        </linearGradient>
-                                      </defs>
-                                      <path
-                                        d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
-                                        fill={`url(#star-grad-${item.usuario_id}-${star})`}
-                                        stroke={fullFilled || halfFilled ? "#f59e0b" : "#ffffff30"}
-                                        strokeWidth="1.2"
-                                      />
-                                    </svg>
-                                  </span>
-                                );
-                              })}
-                              <span className="ml-1 text-xs text-[color:var(--muted)]">
-                                {currentRating > 0 ? currentRating.toFixed(1) : "—"}
-                              </span>
-                              {isSaving && <span className="ml-1 text-[10px] text-[color:var(--accent)]">...</span>}
-                            </div>
-                          </td>
-                          <td className="px-4 py-3 font-semibold">{item.promedio.toFixed(2)}</td>
+                {(() => {
+                  const activeGroup = groups.find((g) => g.id === rankingModal?.groupId);
+                  const showPeerVote = activeGroup?.peer_voting_enabled ?? false;
+                  return (
+                    <table className="min-w-full text-left text-sm">
+                      <thead className="sticky top-0 z-10 bg-[#141a2a]/95 backdrop-blur">
+                        <tr className="border-b border-white/10 text-[color:var(--muted)]">
+                          <th className="px-4 py-3 font-medium">Ranking</th>
+                          <th className="px-4 py-3 font-medium">Estudiante</th>
+                          <th className="px-4 py-3 font-medium hidden sm:table-cell">GitHub</th>
+                          <th className="px-4 py-3 font-medium">Commits</th>
+                          <th className="px-4 py-3 font-medium">Pts commits</th>
+                          <th className="px-4 py-3 font-medium">Nota docente</th>
+                          <th className="px-4 py-3 font-medium">Nota proyecto</th>
+                          {showPeerVote ? <th className="px-4 py-3 font-medium">Peer vote</th> : null}
+                          <th className="px-4 py-3 font-medium">Promedio</th>
                         </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                      </thead>
+                      <tbody>
+                        {rankingItems.map((item) => {
+                          const docenteGrade = rankingDrafts[item.usuario_id]?.docente_grade ?? item.docente_grade;
+                          const proyectoGrade = rankingDrafts[item.usuario_id]?.proyecto_grade ?? item.proyecto_grade;
+                          const currentStars = docenteGrade / 20;
+                          const isSaving = isSavingRankingGrades === item.usuario_id;
+                          return (
+                            <tr key={item.usuario_id} className="border-b border-white/5 text-white/95 last:border-b-0">
+                              <td className="px-4 py-3 font-mono text-xs text-[color:var(--accent)]">#{item.rank}</td>
+                              <td className="px-4 py-3 font-medium">{item.nombre}</td>
+                              <td className="px-4 py-3 hidden sm:table-cell">
+                                {item.github_username ? (
+                                  <a
+                                    className="text-[color:var(--accent)] hover:underline"
+                                    href={`https://github.com/${item.github_username}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                  >
+                                    @{item.github_username}
+                                  </a>
+                                ) : (
+                                  "-"
+                                )}
+                              </td>
+                              <td className="px-4 py-3">{item.commits_count}</td>
+                              <td className="px-4 py-3">{item.commits_points.toFixed(2)}</td>
+                              <td className="px-4 py-3">
+                                <div className="flex items-center gap-0.5" aria-label={`Nota docente: ${docenteGrade}/100`}>
+                                  {[1, 2, 3, 4, 5].map((star) => {
+                                    const fullFilled = currentStars >= star;
+                                    const halfFilled = !fullFilled && currentStars >= star - 0.5;
+                                    return (
+                                      <span key={star} className="relative inline-flex h-6 w-6">
+                                        <button
+                                          type="button"
+                                          aria-label={`${(star - 0.5) * 20}/100`}
+                                          disabled={isSaving}
+                                          className="absolute left-0 top-0 h-full w-1/2 z-10 cursor-pointer disabled:cursor-not-allowed"
+                                          onClick={() => void handleSaveDocenteGrade(item, star - 0.5)}
+                                        />
+                                        <button
+                                          type="button"
+                                          aria-label={`${star * 20}/100`}
+                                          disabled={isSaving}
+                                          className="absolute right-0 top-0 h-full w-1/2 z-10 cursor-pointer disabled:cursor-not-allowed"
+                                          onClick={() => void handleSaveDocenteGrade(item, star)}
+                                        />
+                                        <svg viewBox="0 0 24 24" className="h-6 w-6 select-none" aria-hidden="true">
+                                          <defs>
+                                            <linearGradient id={`star-grad-${item.usuario_id}-${star}`}>
+                                              <stop offset={halfFilled ? "50%" : fullFilled ? "100%" : "0%"} stopColor="#f59e0b" />
+                                              <stop offset={halfFilled ? "50%" : fullFilled ? "100%" : "0%"} stopColor="#ffffff20" />
+                                            </linearGradient>
+                                          </defs>
+                                          <path
+                                            d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
+                                            fill={`url(#star-grad-${item.usuario_id}-${star})`}
+                                            stroke={fullFilled || halfFilled ? "#f59e0b" : "#ffffff30"}
+                                            strokeWidth="1.2"
+                                          />
+                                        </svg>
+                                      </span>
+                                    );
+                                  })}
+                                  <span className="ml-1 text-xs text-[color:var(--muted)]">
+                                    {docenteGrade > 0 ? `${docenteGrade}` : "—"}
+                                  </span>
+                                  {isSaving && <span className="ml-1 text-[10px] text-[color:var(--accent)]">...</span>}
+                                </div>
+                              </td>
+                              <td className="px-4 py-3">
+                                <input
+                                  type="number"
+                                  min="0"
+                                  max="100"
+                                  disabled={isSaving}
+                                  className="w-20 rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-sm text-white outline-none focus:border-[color:var(--accent)]/40 disabled:opacity-50"
+                                  value={proyectoGrade}
+                                  onChange={(e) =>
+                                    setRankingDrafts((cur) => ({
+                                      ...cur,
+                                      [item.usuario_id]: { ...cur[item.usuario_id], proyecto_grade: Number(e.target.value) },
+                                    }))
+                                  }
+                                  onBlur={() => void handleSaveProyectoGrade(item, proyectoGrade)}
+                                />
+                              </td>
+                              {showPeerVote ? (
+                                <td className="px-4 py-3">
+                                  <span className="text-amber-400">
+                                    {item.peer_vote_avg > 0 ? `★ ${item.peer_vote_avg.toFixed(1)}` : "—"}
+                                  </span>
+                                </td>
+                              ) : null}
+                              <td className="px-4 py-3 font-semibold">{item.promedio.toFixed(2)}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  );
+                })()}
               </div>
             )}
           </div>
@@ -2085,6 +2189,50 @@ export default function DocentePage() {
                   </tbody>
                 </table>
               </div>
+            )}
+          </div>
+        </div>
+      ) : null}
+
+      {studentInviteModal ? (
+        <div className="fixed inset-0 z-[99] flex items-center justify-center bg-[#16160f]/80 px-4">
+          <div className="glass-panel w-full max-w-lg rounded-[1.8rem] p-7 space-y-5">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="font-mono text-xs uppercase tracking-[0.24em] text-[color:var(--accent)]">Invitar alumnos</p>
+                <h3 className="mt-2 font-serif text-2xl font-semibold text-[color:var(--foreground)]">
+                  {studentInviteModal.groupName}
+                </h3>
+              </div>
+              <button
+                type="button"
+                className="rounded-full border border-white/10 px-3 py-1 text-sm text-[color:var(--muted)] transition hover:border-white/20 hover:text-white"
+                onClick={() => { setStudentInviteModal(null); setCopiedInviteLink(false); }}
+              >
+                Cerrar
+              </button>
+            </div>
+
+            {studentInviteModal.isLoading ? (
+              <p className="text-sm text-[color:var(--muted)]">Generando link...</p>
+            ) : studentInviteModal.link ? (
+              <div className="space-y-4">
+                <p className="text-sm text-[color:var(--muted)] leading-6">
+                  Comparte este link con tus alumnos. Al abrirlo podrán registrarse directamente en este grupo. El link es válido por 30 días.
+                </p>
+                <div className="rounded-xl border border-white/10 bg-white/5 p-4 break-all font-mono text-xs text-[color:var(--foreground)]">
+                  {studentInviteModal.link}
+                </div>
+                <button
+                  type="button"
+                  className="w-full rounded-sm bg-[color:var(--accent)] px-4 py-3 font-serif text-sm font-semibold text-[#1a1a16] transition hover:bg-[color:var(--accent-strong)]"
+                  onClick={() => void copyInviteLink(studentInviteModal.link!)}
+                >
+                  {copiedInviteLink ? "¡Copiado!" : "Copiar link"}
+                </button>
+              </div>
+            ) : (
+              <p className="text-sm text-red-400">No se pudo generar el link. Intenta de nuevo.</p>
             )}
           </div>
         </div>
