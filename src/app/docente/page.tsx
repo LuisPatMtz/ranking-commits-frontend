@@ -130,6 +130,9 @@ export default function DocentePage() {
   const [editingMemberId, setEditingMemberId] = useState<number | null>(null);
   const [editingMemberForm, setEditingMemberForm] = useState({ nombre: "", github_username: "" });
   const [isSubmittingMemberEdit, setIsSubmittingMemberEdit] = useState(false);
+  const [removeConfirmModal, setRemoveConfirmModal] = useState<{ participantId: number; nombre: string } | null>(null);
+  const [isRemovingMember, setIsRemovingMember] = useState(false);
+
   useEffect(() => {
     const frameId = window.requestAnimationFrame(() => {
       const session = readAuthSession();
@@ -165,6 +168,10 @@ export default function DocentePage() {
         setMemberCommitsModal(null);
         return;
       }
+      if (removeConfirmModal) {
+        setRemoveConfirmModal(null);
+        return;
+      }
       if (membersModal) {
         setMembersModal(null);
         setIsCreatingNewCompetitor(false);
@@ -198,7 +205,7 @@ export default function DocentePage() {
     return () => {
       window.removeEventListener("keydown", handleEscapeKey);
     };
-  }, [activeModal, cardMenuGroupId, isNotificationsOpen, memberCommitsModal, membersModal, rankingModal, shareModal, successModal, isGeneralRankingModalOpen]);
+  }, [activeModal, cardMenuGroupId, isNotificationsOpen, memberCommitsModal, membersModal, rankingModal, shareModal, successModal, isGeneralRankingModalOpen, removeConfirmModal]);
 
   const availableCarreras = Array.from(new Set(groups.map((group) => group.carrera))).sort((a, b) => a.localeCompare(b));
   const availableSemestres = Array.from(new Set(groups.map((group) => group.semestre))).sort((a, b) => a - b);
@@ -733,24 +740,26 @@ export default function DocentePage() {
     }
   }
 
-  async function handleRemoveStudentFromGroup(participantId: number) {
-    if (!accessToken) {
+  async function handleRemoveStudentFromGroup(participantId: number, memberName: string) {
+    setRemoveConfirmModal({ participantId, nombre: memberName });
+  }
+
+  async function handleConfirmRemoveStudent() {
+    if (!accessToken || !membersModal || !removeConfirmModal) {
       setFeedback("Tu sesion no es valida. Inicia sesion nuevamente.");
       return;
     }
-    if (!membersModal) {
-      return;
-    }
 
-    setIsSubmittingMemberChange(true);
+    setIsRemovingMember(true);
     try {
-      await apiDelete<{ message: string }>(`/grupos/${membersModal.groupId}/alumnos/participantes/${participantId}`, accessToken);
+      await apiDelete<{ message: string }>(`/grupos/${membersModal.groupId}/alumnos/participantes/${removeConfirmModal.participantId}`, accessToken);
       await loadGroupMembersContext(membersModal.groupId, accessToken);
-      setFeedback("Alumno removido del grupo.");
+      setFeedback("Competidor removido del grupo.");
+      setRemoveConfirmModal(null);
     } catch (error) {
-      setFeedback(error instanceof ApiError ? error.detail : "No se pudo remover el alumno.");
+      setFeedback(error instanceof ApiError ? error.detail : "No se pudo remover el competidor.");
     } finally {
-      setIsSubmittingMemberChange(false);
+      setIsRemovingMember(false);
     }
   }
 
@@ -1297,7 +1306,7 @@ export default function DocentePage() {
       ) : null}
 
       {successModal ? (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-[#16160f]/80 px-4">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#16160f]/80 px-4">
           <div className="glass-panel w-full max-w-md rounded-[1.8rem] p-7">
             <h3 className="mt-3 font-serif text-2xl sm:text-3xl font-semibold text-[color:var(--foreground)]">{successModal.title}</h3>
             <p className="mt-3 text-sm leading-6 text-[color:var(--muted)]">{successModal.message}</p>
@@ -1591,8 +1600,8 @@ export default function DocentePage() {
                                 <button
                                   type="button"
                                   className="w-full whitespace-nowrap rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-semibold text-white transition hover:border-red-300/50 hover:text-red-200 disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
-                                  onClick={() => void handleRemoveStudentFromGroup(member.participant_id)}
-                                  disabled={isSubmittingMemberChange}
+                                  onClick={() => handleRemoveStudentFromGroup(member.participant_id, member.nombre)}
+                                  disabled={isRemovingMember}
                                 >
                                   Quitar
                                 </button>
@@ -1606,6 +1615,7 @@ export default function DocentePage() {
                 </div>
               </>
             )}
+
           </div>
         </div>
       ) : null}
@@ -1679,6 +1689,42 @@ export default function DocentePage() {
           </div>
         </div>
       )}
+
+      {removeConfirmModal ? (
+        <div className="fixed inset-0 z-[99] flex items-center justify-center bg-[#16160f]/80 px-4">
+          <div className="glass-panel w-full max-w-md rounded-[1.8rem] p-7">
+            <div className="flex items-center justify-between gap-4 mb-4">
+              <div>
+                <p className="font-mono text-xs uppercase tracking-[0.24em] text-red-400">Confirmar eliminación</p>
+                <h3 className="mt-2 font-serif text-2xl sm:text-3xl font-semibold text-[color:var(--foreground)]">¿Quitar competidor?</h3>
+              </div>
+            </div>
+
+            <p className="mt-4 text-sm text-[color:var(--muted)]">
+              ¿Estás seguro de que deseas quitar a <span className="font-semibold text-white">{removeConfirmModal.nombre}</span> de este grupo? Esta acción no se puede deshacer.
+            </p>
+
+            <div className="mt-6 flex gap-3">
+              <button
+                type="button"
+                className="flex-1 rounded-sm border border-white/10 bg-white/5 px-4 py-3 font-serif text-sm font-semibold text-[color:var(--foreground)] transition hover:border-[color:var(--accent)]/35 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-70"
+                onClick={() => setRemoveConfirmModal(null)}
+                disabled={isRemovingMember}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="flex-1 rounded-sm border border-red-400/20 bg-red-500/10 px-4 py-3 font-serif text-sm font-semibold text-red-100 transition hover:border-red-300/40 hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-70"
+                onClick={() => void handleConfirmRemoveStudent()}
+                disabled={isRemovingMember}
+              >
+                {isRemovingMember ? "Eliminando..." : "Quitar competidor"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {memberCommitsModal ? (
         <div className="fixed inset-0 z-[73] flex items-center justify-center bg-[#16160f]/80 px-4 py-6">
