@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
-import { readAuthSession } from "@/features/auth/session";
+import { clearAuthSession, readAuthSession } from "@/features/auth/session";
 import { ApiError, apiGet, apiPost } from "@/lib/api";
 import type { CompañeroVotable, GithubSyncResponse, MiPerfilAlumno, PeerVoteOut, VotoRecibidoOut, ZenQuote } from "@/types";
 
@@ -63,7 +63,7 @@ export default function AlumnoPage() {
       try {
         const [p, zenRes] = await Promise.all([
           apiGet<MiPerfilAlumno>("/alumnos/mi-perfil", token!),
-          fetch("https://zenquotes.io/api/random").then((r) => r.json()).catch(() => null),
+          fetch("/api/quote").then((r) => r.json()).catch(() => null),
         ]);
         setPerfil(p);
         if (Array.isArray(zenRes) && zenRes[0]) setQuote(zenRes[0] as ZenQuote);
@@ -132,9 +132,19 @@ export default function AlumnoPage() {
     }
   }
 
+  const logoutBtn = (
+    <button
+      type="button"
+      className="rounded-sm border border-red-400/20 bg-red-500/10 px-4 py-2 font-serif text-sm font-semibold text-red-100 transition hover:border-red-300/40 hover:bg-red-500/20"
+      onClick={() => { clearAuthSession(); window.location.href = "/login"; }}
+    >
+      Salir
+    </button>
+  );
+
   if (loading) {
     return (
-      <DashboardShell title="Mi perfil">
+      <DashboardShell title="Mi perfil" headerActions={logoutBtn}>
         <p className="text-[color:var(--muted)]">Cargando...</p>
       </DashboardShell>
     );
@@ -142,7 +152,7 @@ export default function AlumnoPage() {
 
   if (error) {
     return (
-      <DashboardShell title="Mi perfil">
+      <DashboardShell title="Mi perfil" headerActions={logoutBtn}>
         <p className="text-red-400">{error}</p>
       </DashboardShell>
     );
@@ -152,6 +162,7 @@ export default function AlumnoPage() {
     <DashboardShell
       title="Mi perfil"
       subtitle={quote ? `"${quote.q}" — ${quote.a}` : undefined}
+      headerActions={logoutBtn}
     >
       <div className="space-y-6">
         {/* Resumen */}
@@ -161,7 +172,7 @@ export default function AlumnoPage() {
             <Stat label="Nombre" value={perfil?.nombre ?? "—"} />
             <Stat label="GitHub" value={perfil?.github_username ? `@${perfil.github_username}` : "—"} />
             <Stat label="Proyecto" value={perfil?.proyecto_nombre ?? "Sin proyecto"} />
-            <Stat label="Commits" value={String(perfil?.commits_count ?? 0)} />
+            <Stat label="Contribuciones" value={String(perfil?.commits_count ?? 0)} />
             <Stat label="🔥 Racha" value={`${perfil?.streak_days ?? 0} días`} />
             <Stat label="⭐ Estrellas" value={perfil?.peer_vote_avg ? perfil.peer_vote_avg.toFixed(1) : "—"} />
           </div>
@@ -178,34 +189,26 @@ export default function AlumnoPage() {
           )}
         </section>
 
-        {/* Sync de commits */}
+        {/* Sync — fila compacta */}
         {perfil?.github_username && (
-          <section className="glass-panel rounded-[1.75rem] p-6">
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div>
-                <h2 className="font-semibold text-[color:var(--accent)]">Sincronizar commits</h2>
-                <p className="text-xs text-[color:var(--muted)]">
-                  Actualiza tus commits desde GitHub (@{perfil.github_username})
-                </p>
-              </div>
-              <button
-                onClick={() => void handleSync()}
-                disabled={syncing}
-                className="rounded-full bg-[color:var(--accent)] px-5 py-2 text-sm font-semibold text-black transition hover:opacity-80 disabled:opacity-40"
-              >
-                {syncing ? "Sincronizando…" : "↻ Actualizar mis commits"}
-              </button>
-            </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              onClick={() => void handleSync()}
+              disabled={syncing}
+              className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-xs font-medium text-[color:var(--muted)] transition hover:bg-white/10 disabled:opacity-40"
+            >
+              <span className={syncing ? "animate-spin" : ""}>↻</span>
+              {syncing ? "Sincronizando…" : "Sincronizar contribuciones"}
+            </button>
             {syncResult && (
-              <p className="mt-3 rounded-lg bg-green-500/10 px-4 py-2 text-sm text-green-400">
-                ✓ Sync completado — {syncResult.commits_nuevos} commits nuevos,{" "}
-                {syncResult.repos_nuevos} repos nuevos.
-              </p>
+              <span className="text-xs text-green-400">
+                ✓ {syncResult.commits_nuevos} commits nuevos · racha {syncResult.streak_days ?? "—"}d
+              </span>
             )}
             {syncError && (
-              <p className="mt-3 rounded-lg bg-red-500/10 px-4 py-2 text-sm text-red-400">{syncError}</p>
+              <span className="text-xs text-red-400">{syncError}</span>
             )}
-          </section>
+          </div>
         )}
 
         {/* Votación entre pares */}

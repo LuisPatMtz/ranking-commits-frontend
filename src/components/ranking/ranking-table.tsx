@@ -13,7 +13,7 @@ export function RankingTable({ items }: RankingTableProps) {
             <th className="px-4 py-3">#</th>
             <th className="px-4 py-3">Alumno</th>
             <th className="px-4 py-3">Grupo</th>
-            <th className="px-4 py-3">Commits</th>
+            <th className="px-4 py-3">Contribuciones</th>
             <th className="px-4 py-3">🔥 Racha</th>
             <th className="px-4 py-3">Score</th>
           </tr>

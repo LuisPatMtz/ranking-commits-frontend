@@ -1849,8 +1849,8 @@ export default function DocentePage() {
                           <th className="px-4 py-3 font-medium">Ranking</th>
                           <th className="px-4 py-3 font-medium">Estudiante</th>
                           <th className="px-4 py-3 font-medium hidden sm:table-cell">GitHub</th>
-                          <th className="px-4 py-3 font-medium">Commits</th>
-                          <th className="px-4 py-3 font-medium">Pts commits</th>
+                          <th className="px-4 py-3 font-medium">Contribuciones</th>
+                          <th className="px-4 py-3 font-medium">Pts actividad</th>
                           <th className="px-4 py-3 font-medium">🔥 Racha</th>
                           {showPeerVote ? <th className="px-4 py-3 font-medium">Peer vote</th> : null}
                           <th className="px-4 py-3 font-medium">Promedio</th>
