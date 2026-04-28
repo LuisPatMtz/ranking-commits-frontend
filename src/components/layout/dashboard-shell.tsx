@@ -30,7 +30,7 @@ export function DashboardShell({ title, subtitle, headerActions, children }: Das
           <Image src="/logo.png" alt="Ranking Commits Logo" width={32} height={32} className="opacity-90" priority />
           <span className="font-serif text-sm sm:text-base font-semibold tracking-widest text-[color:var(--accent)]">RANKING COMMITS</span>
         </Link>
-        
+
         <div className="flex items-center gap-4 sm:gap-6">
           <div className="text-right hidden sm:block">
             <p className="font-mono text-[10px] uppercase tracking-[0.26em] text-[color:var(--accent)]">Bienvenido</p>
@@ -40,6 +40,15 @@ export function DashboardShell({ title, subtitle, headerActions, children }: Das
           {headerActions ? <div className="flex flex-wrap gap-2 sm:gap-3">{headerActions}</div> : null}
         </div>
       </header>
+
+      {/* Título de página */}
+      <div className="relative z-10 mx-auto max-w-7xl px-6 pb-4 lg:px-8">
+        <h1 className="text-2xl font-semibold tracking-tight text-white">{title}</h1>
+        {subtitle && (
+          <p className="mt-0.5 text-sm italic text-[color:var(--muted)]">{subtitle}</p>
+        )}
+      </div>
+
       <main className="relative z-10 mx-auto max-w-7xl px-6 pb-10 lg:px-8">{children}</main>
     </div>
   );

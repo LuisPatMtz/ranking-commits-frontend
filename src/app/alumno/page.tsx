@@ -149,16 +149,11 @@ export default function AlumnoPage() {
   }
 
   return (
-    <DashboardShell title="Mi perfil">
+    <DashboardShell
+      title="Mi perfil"
+      subtitle={quote ? `"${quote.q}" — ${quote.a}` : undefined}
+    >
       <div className="space-y-6">
-        {/* Frase motivadora */}
-        {quote && (
-          <section className="rounded-[1.75rem] border border-white/8 bg-white/3 px-6 py-4">
-            <p className="text-sm italic text-[color:var(--muted)]">"{quote.q}"</p>
-            <p className="mt-1 text-xs text-[color:var(--accent)]">— {quote.a}</p>
-          </section>
-        )}
-
         {/* Resumen */}
         <section className="glass-panel rounded-[1.75rem] p-6">
           <h2 className="mb-4 font-semibold text-[color:var(--accent)]">Resumen</h2>
