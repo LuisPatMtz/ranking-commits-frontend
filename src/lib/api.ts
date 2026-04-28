@@ -5,6 +5,7 @@ function handleUnauthorized(path: string): void {
     return;
   }
 
+  window.sessionStorage.removeItem("rc.auth.session");
   window.localStorage.removeItem("rc.auth.session");
   if (!path.startsWith("/auth/login")) {
     window.location.href = "/login?expired=1";

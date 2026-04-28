@@ -14,6 +14,8 @@ export interface AuthSession {
 }
 
 const AUTH_SESSION_KEY = "rc.auth.session";
+// Claves legacy que pudieron quedar de versiones anteriores del código
+const LEGACY_KEYS = ["access_token", "token", "auth_token", "rc_token"];
 
 const dashboardPaths: Record<UserRole, string> = {
   admin: "/admin",
@@ -25,12 +27,21 @@ export function resolveDashboardPath(role: UserRole): string {
   return dashboardPaths[role] || "/ranking";
 }
 
+function purgeLegacyKeys(): void {
+  LEGACY_KEYS.forEach((key) => {
+    window.localStorage.removeItem(key);
+    window.sessionStorage.removeItem(key);
+  });
+  // Elimina también la clave principal de localStorage si hubiera migrado a sessionStorage
+  window.localStorage.removeItem(AUTH_SESSION_KEY);
+}
+
 export function readAuthSession(): AuthSession | null {
   if (typeof window === "undefined") {
     return null;
   }
 
-  const storedValue = window.localStorage.getItem(AUTH_SESSION_KEY);
+  const storedValue = window.sessionStorage.getItem(AUTH_SESSION_KEY);
   if (!storedValue) {
     return null;
   }
@@ -38,7 +49,7 @@ export function readAuthSession(): AuthSession | null {
   try {
     return JSON.parse(storedValue) as AuthSession;
   } catch {
-    window.localStorage.removeItem(AUTH_SESSION_KEY);
+    window.sessionStorage.removeItem(AUTH_SESSION_KEY);
     return null;
   }
 }
@@ -48,7 +59,8 @@ export function saveAuthSession(session: AuthSession): void {
     return;
   }
 
-  window.localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(session));
+  purgeLegacyKeys();
+  window.sessionStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(session));
 }
 
 export function clearAuthSession(): void {
@@ -56,5 +68,6 @@ export function clearAuthSession(): void {
     return;
   }
 
-  window.localStorage.removeItem(AUTH_SESSION_KEY);
+  purgeLegacyKeys();
+  window.sessionStorage.removeItem(AUTH_SESSION_KEY);
 }
