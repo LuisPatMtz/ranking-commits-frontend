@@ -49,8 +49,6 @@ type MemberCommitsModalState = {
   username: string;
 } | null;
 
-type RankingDraftMap = Record<number, Record<string, never>>;
-
 type StudentInviteModal = {
   groupId: number;
   groupName: string;
@@ -116,11 +114,9 @@ export default function DocentePage() {
   const [generalRankingFromDate, setGeneralRankingFromDate] = useState("");
   const [generalRankingToDate, setGeneralRankingToDate] = useState("");
   const [isGeneralRankingModalOpen, setIsGeneralRankingModalOpen] = useState(false);
-  const [rankingDrafts, setRankingDrafts] = useState<RankingDraftMap>({});
   const [isLoadingRanking, setIsLoadingRanking] = useState(false);
   const [isLoadingGeneralRanking, setIsLoadingGeneralRanking] = useState(false);
   const [isRefreshingRanking, setIsRefreshingRanking] = useState(false);
-  const [isSavingRankingGrades, setIsSavingRankingGrades] = useState<number | null>(null);
   const [groupSearch, setGroupSearch] = useState("");
   const [filterCarrera, setFilterCarrera] = useState("all");
   const [filterSemestre, setFilterSemestre] = useState("all");
@@ -250,7 +246,7 @@ export default function DocentePage() {
         const myGroups = await apiGet<Group[]>("/proyectos", accessToken);
         setGroups(myGroups);
       } catch (error) {
-        setFeedback(error instanceof ApiError ? error.detail : "No se pudieron cargar tus grupos.");
+        setFeedback(error instanceof ApiError ? error.detail : "No se pudieron cargar tus proyectos.");
       } finally {
         setIsLoadingGroups(false);
       }
@@ -509,7 +505,7 @@ export default function DocentePage() {
         return;
       }
       if (!studentForm.grupo_id) {
-        setFeedback("Selecciona un grupo para el participante.");
+        setFeedback("Selecciona un proyecto para el participante.");
         return;
       }
 
@@ -727,7 +723,7 @@ export default function DocentePage() {
     try {
       await loadGroupMembersContext(group.id, accessToken);
     } catch (error) {
-      setFeedback(error instanceof ApiError ? error.detail : "No se pudieron cargar los alumnos del grupo.");
+      setFeedback(error instanceof ApiError ? error.detail : "No se pudieron cargar los alumnos del proyecto.");
       setMembersModal(null);
     } finally {
       setIsLoadingMembers(false);
@@ -777,7 +773,7 @@ export default function DocentePage() {
     try {
       await apiDelete<{ message: string }>(`/proyectos/${membersModal.groupId}/alumnos/participantes/${removeConfirmModal.participantId}`, accessToken);
       await loadGroupMembersContext(membersModal.groupId, accessToken);
-      setFeedback("Competidor removido del grupo.");
+      setFeedback("Competidor removido del proyecto.");
       setRemoveConfirmModal(null);
     } catch (error) {
       setFeedback(error instanceof ApiError ? error.detail : "No se pudo remover el competidor.");
@@ -834,7 +830,6 @@ export default function DocentePage() {
   async function loadGroupRanking(groupId: number, token: string) {
     const items = await apiGet<GroupRankingItem[]>(`/ranking/proyecto/${groupId}`, token);
     setRankingItems(items);
-    setRankingDrafts({});
   }
 
   async function openRankingModal(group: Group) {
@@ -848,7 +843,7 @@ export default function DocentePage() {
     try {
       await loadGroupRanking(group.id, accessToken);
     } catch (error) {
-      setFeedback(error instanceof ApiError ? error.detail : "No se pudo cargar el ranking del grupo.");
+      setFeedback(error instanceof ApiError ? error.detail : "No se pudo cargar el ranking del proyecto.");
       setRankingModal(null);
     } finally {
       setIsLoadingRanking(false);
@@ -1006,11 +1001,11 @@ export default function DocentePage() {
         ) : null}
 
         {isLoadingGroups ? (
-          <p className="mt-4 text-sm text-[color:var(--muted)]">Cargando tus grupos...</p>
+          <p className="mt-4 text-sm text-[color:var(--muted)]">Cargando tus proyectos...</p>
         ) : !accessToken ? (
-          <p className="mt-4 text-sm text-[color:var(--muted)]">Inicia sesion para consultar tus grupos.</p>
+          <p className="mt-4 text-sm text-[color:var(--muted)]">Inicia sesion para consultar tus proyectos.</p>
         ) : filteredGroups.length === 0 ? (
-          <p className="mt-4 text-sm text-[color:var(--muted)]">Aun no has creado grupos.</p>
+          <p className="mt-4 text-sm text-[color:var(--muted)]">Aun no has creado proyectos.</p>
         ) : groupsViewMode === "cards" ? (
           <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {filteredGroups.map((group, index) => (
@@ -1096,7 +1091,7 @@ export default function DocentePage() {
                               openShareModal(group);
                             }}
                           >
-                            Compartir grupo
+                            Compartir proyecto
                           </button>
                           <button
                             type="button"
@@ -1185,7 +1180,7 @@ export default function DocentePage() {
               <path d="M3 3v18h18" />
               <path d="m19 9-5 5-4-4-3 3" />
             </svg>
-            Ranking general de tus grupos
+            Ranking general de tus proyectos
           </button>
         </div>
       </section>
@@ -1197,10 +1192,10 @@ export default function DocentePage() {
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="font-mono text-xs uppercase tracking-[0.24em] text-[color:var(--accent)]">
-                  {activeModal === "group" ? (editingGroup ? "Modificar grupo" : "Nuevo grupo") : "Nuevo participante"}
+                  {activeModal === "group" ? (editingGroup ? "Modificar proyecto" : "Nuevo proyecto") : "Nuevo participante"}
                 </p>
                 <h3 className="mt-2 font-serif text-2xl sm:text-3xl font-semibold text-[color:var(--foreground)]">
-                  {activeModal === "group" ? (editingGroup ? "Modificar grupo" : "Agregar grupo") : "Agregar participante"}
+                  {activeModal === "group" ? (editingGroup ? "Editar proyecto" : "Crear proyecto") : "Agregar participante"}
                 </h3>
               </div>
               <button
@@ -1243,34 +1238,44 @@ export default function DocentePage() {
                 <form className="grid gap-4 sm:grid-cols-2" onSubmit={handleSubmitGroup}>
                   <input
                     className="rounded-2xl border border-white/10 bg-white/6 px-4 py-3 text-white outline-none placeholder:text-slate-500 focus:border-[color:var(--accent)]/40 sm:col-span-2"
-                    placeholder="Nombre del grupo"
+                    placeholder="Nombre del proyecto"
                     value={groupForm.nombre}
                     onChange={(event) => setGroupForm((current) => ({ ...current, nombre: event.target.value }))}
                     required
                   />
                   <input
-                    className="rounded-2xl border border-white/10 bg-white/6 px-4 py-3 text-white outline-none placeholder:text-slate-500 focus:border-[color:var(--accent)]/40"
+                    className="rounded-2xl border border-white/10 bg-white/6 px-4 py-3 text-white outline-none placeholder:text-slate-500 focus:border-[color:var(--accent)]/40 sm:col-span-2"
                     placeholder="Carrera"
                     value={groupForm.carrera}
                     onChange={(event) => setGroupForm((current) => ({ ...current, carrera: event.target.value }))}
                     required
                   />
-                  <input
-                    className="rounded-2xl border border-white/10 bg-white/6 px-4 py-3 text-white outline-none placeholder:text-slate-500 focus:border-[color:var(--accent)]/40"
-                    placeholder="Semestre"
-                    type="number"
-                    min="1"
-                    max="12"
-                    value={groupForm.semestre}
-                    onChange={(event) => setGroupForm((current) => ({ ...current, semestre: event.target.value }))}
-                    required
-                  />
+                  <div className="flex flex-col gap-1">
+                    <label className="px-1 text-xs text-[color:var(--muted)]">Inicio del proyecto</label>
+                    <input
+                      className="rounded-2xl border border-white/10 bg-white/6 px-4 py-3 text-white outline-none focus:border-[color:var(--accent)]/40"
+                      type="datetime-local"
+                      value={groupForm.fecha_inicio}
+                      onChange={(event) => setGroupForm((current) => ({ ...current, fecha_inicio: event.target.value }))}
+                      required
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="px-1 text-xs text-[color:var(--muted)]">Cierre del proyecto</label>
+                    <input
+                      className="rounded-2xl border border-white/10 bg-white/6 px-4 py-3 text-white outline-none focus:border-[color:var(--accent)]/40"
+                      type="datetime-local"
+                      value={groupForm.fecha_cierre}
+                      onChange={(event) => setGroupForm((current) => ({ ...current, fecha_cierre: event.target.value }))}
+                      required
+                    />
+                  </div>
                   <button
                     type="submit"
                     disabled={isSubmittingGroup}
                     className="sm:col-span-2 rounded-full bg-[color:var(--accent)] px-5 py-3 font-semibold text-slate-950 transition hover:bg-[color:var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-70"
                   >
-                    {isSubmittingGroup ? "Guardando grupo..." : editingGroup ? "Actualizar grupo" : "Guardar grupo"}
+                    {isSubmittingGroup ? "Guardando..." : editingGroup ? "Actualizar proyecto" : "Crear proyecto"}
                   </button>
                 </form>
               </div>
@@ -1290,7 +1295,7 @@ export default function DocentePage() {
                   required
                 >
                   <option value="" className="bg-[#1a1a16] text-slate-300">
-                    Selecciona un grupo
+                    Selecciona un proyecto
                   </option>
                   {groups.map((group) => (
                     <option key={group.id} value={group.id} className="bg-[#1a1a16] text-white">
@@ -1338,7 +1343,7 @@ export default function DocentePage() {
           <div className="glass-panel w-full max-w-xl rounded-[1.8rem] p-7">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="font-mono text-xs uppercase tracking-[0.24em] text-[color:var(--accent)]">Compartir grupo</p>
+                <p className="font-mono text-xs uppercase tracking-[0.24em] text-[color:var(--accent)]">Compartir proyecto</p>
                 <h3 className="mt-2 font-serif text-2xl sm:text-3xl font-semibold text-[color:var(--foreground)]">{shareModal.groupName}</h3>
               </div>
               <button
@@ -1399,7 +1404,7 @@ export default function DocentePage() {
               onClick={() => void handleShareGroup()}
               disabled={!selectedShareTarget || isSubmittingShare}
             >
-              {isSubmittingShare ? "Compartiendo..." : "Compartir grupo"}
+              {isSubmittingShare ? "Compartiendo..." : "Compartir proyecto"}
             </button>
 
             <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-4">
@@ -1573,7 +1578,7 @@ export default function DocentePage() {
 
                 <div className="mt-5 min-h-0 flex-1 overflow-auto rounded-2xl border border-white/10 bg-white/5 relative">
                   {groupMembers.length === 0 ? (
-                    <p className="px-4 py-4 text-sm text-[color:var(--muted)]">Este grupo no tiene alumnos.</p>
+                    <p className="px-4 py-4 text-sm text-[color:var(--muted)]">Este proyecto no tiene alumnos.</p>
                   ) : (
                     <table className="min-w-full text-left text-sm">
                       <thead className="sticky top-0 z-10 bg-[#141a2a]/95 backdrop-blur">
@@ -1713,7 +1718,7 @@ export default function DocentePage() {
             </div>
 
             <p className="mt-4 text-sm text-[color:var(--muted)]">
-              ¿Estás seguro de que deseas quitar a <span className="font-semibold text-white">{removeConfirmModal.nombre}</span> de este grupo? Esta acción no se puede deshacer.
+              ¿Estás seguro de que deseas quitar a <span className="font-semibold text-white">{removeConfirmModal.nombre}</span> de este proyecto? Esta acción no se puede deshacer.
             </p>
 
             <div className="mt-6 flex gap-3">
@@ -1807,7 +1812,7 @@ export default function DocentePage() {
             <div className="flex shrink-0 flex-wrap items-start justify-between gap-3">
               <div>
                 <h3 className="font-serif text-2xl sm:text-3xl font-semibold text-[color:var(--foreground)]">Ranking - {rankingModal.groupName}</h3>
-                <p className="text-sm text-[color:var(--muted)]">Escala 0-100 por criterio. Puntos por commits usan regla de 3 con maximo del grupo.</p>
+                <p className="text-sm text-[color:var(--muted)]">Escala 0-100 por criterio. Puntos por commits usan regla de 3 con maximo del proyecto.</p>
               </div>
               <div className="flex gap-2">
                 <button
@@ -1831,7 +1836,7 @@ export default function DocentePage() {
             {isLoadingRanking ? (
               <p className="mt-5 text-sm text-[color:var(--muted)]">Cargando ranking...</p>
             ) : rankingItems.length === 0 ? (
-              <p className="mt-5 text-sm text-[color:var(--muted)]">No hay alumnos en este grupo.</p>
+              <p className="mt-5 text-sm text-[color:var(--muted)]">No hay alumnos en este proyecto.</p>
             ) : (
               <div className="mt-5 min-h-0 flex-1 overflow-auto rounded-2xl border border-white/10 bg-white/5 relative">
                 {(() => {
@@ -1846,7 +1851,6 @@ export default function DocentePage() {
                           <th className="px-4 py-3 font-medium hidden sm:table-cell">GitHub</th>
                           <th className="px-4 py-3 font-medium">Commits</th>
                           <th className="px-4 py-3 font-medium">Pts commits</th>
-                          <th className="px-4 py-3 font-medium">Nota docente</th>
                           <th className="px-4 py-3 font-medium">🔥 Racha</th>
                           {showPeerVote ? <th className="px-4 py-3 font-medium">Peer vote</th> : null}
                           <th className="px-4 py-3 font-medium">Promedio</th>
@@ -1854,9 +1858,6 @@ export default function DocentePage() {
                       </thead>
                       <tbody>
                         {rankingItems.map((item) => {
-                          const docenteGrade = rankingDrafts[item.usuario_id]?.docente_grade ?? item.docente_grade;
-                          const currentStars = docenteGrade / 20;
-                          const isSaving = isSavingRankingGrades === item.usuario_id;
                           return (
                             <tr key={item.usuario_id} className="border-b border-white/5 text-white/95 last:border-b-0">
                               <td className="px-4 py-3 font-mono text-xs text-[color:var(--accent)]">#{item.rank}</td>
@@ -1877,50 +1878,6 @@ export default function DocentePage() {
                               </td>
                               <td className="px-4 py-3">{item.commits_count}</td>
                               <td className="px-4 py-3">{item.commits_points.toFixed(2)}</td>
-                              <td className="px-4 py-3">
-                                <div className="flex items-center gap-0.5" aria-label={`Nota docente: ${docenteGrade}/100`}>
-                                  {[1, 2, 3, 4, 5].map((star) => {
-                                    const fullFilled = currentStars >= star;
-                                    const halfFilled = !fullFilled && currentStars >= star - 0.5;
-                                    return (
-                                      <span key={star} className="relative inline-flex h-6 w-6">
-                                        <button
-                                          type="button"
-                                          aria-label={`${(star - 0.5) * 20}/100`}
-                                          disabled={isSaving}
-                                          className="absolute left-0 top-0 h-full w-1/2 z-10 cursor-pointer disabled:cursor-not-allowed"
-                                          onClick={() => void handleSaveDocenteGrade(item, star - 0.5)}
-                                        />
-                                        <button
-                                          type="button"
-                                          aria-label={`${star * 20}/100`}
-                                          disabled={isSaving}
-                                          className="absolute right-0 top-0 h-full w-1/2 z-10 cursor-pointer disabled:cursor-not-allowed"
-                                          onClick={() => void handleSaveDocenteGrade(item, star)}
-                                        />
-                                        <svg viewBox="0 0 24 24" className="h-6 w-6 select-none" aria-hidden="true">
-                                          <defs>
-                                            <linearGradient id={`star-grad-${item.usuario_id}-${star}`}>
-                                              <stop offset={halfFilled ? "50%" : fullFilled ? "100%" : "0%"} stopColor="#f59e0b" />
-                                              <stop offset={halfFilled ? "50%" : fullFilled ? "100%" : "0%"} stopColor="#ffffff20" />
-                                            </linearGradient>
-                                          </defs>
-                                          <path
-                                            d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
-                                            fill={`url(#star-grad-${item.usuario_id}-${star})`}
-                                            stroke={fullFilled || halfFilled ? "#f59e0b" : "#ffffff30"}
-                                            strokeWidth="1.2"
-                                          />
-                                        </svg>
-                                      </span>
-                                    );
-                                  })}
-                                  <span className="ml-1 text-xs text-[color:var(--muted)]">
-                                    {docenteGrade > 0 ? `${docenteGrade}` : "—"}
-                                  </span>
-                                  {isSaving && <span className="ml-1 text-[10px] text-[color:var(--accent)]">...</span>}
-                                </div>
-                              </td>
                               <td className="px-4 py-3">
                                 <span className={item.streak_days > 0 ? "font-medium text-orange-400" : "text-[color:var(--muted)]"}>
                                   {item.streak_days > 0 ? `🔥 ${item.streak_days}d` : "—"}
@@ -1995,8 +1952,8 @@ export default function DocentePage() {
           <div className="glass-panel w-full max-w-6xl rounded-[1.8rem] p-7 flex max-h-[90vh] flex-col">
             <div className="flex flex-wrap items-start justify-between gap-3 shrink-0">
               <div>
-                <h3 className="font-serif text-2xl sm:text-3xl font-semibold text-[color:var(--foreground)]">Ranking general de tus grupos</h3>
-                <p className="mt-1 text-sm text-[color:var(--muted)]">Filtra por metrica y periodo usando solo los grupos visibles ahora.</p>
+                <h3 className="font-serif text-2xl sm:text-3xl font-semibold text-[color:var(--foreground)]">Ranking general de tus proyectos</h3>
+                <p className="mt-1 text-sm text-[color:var(--muted)]">Filtra por metrica y periodo usando solo los proyectos visibles ahora.</p>
               </div>
               <div className="flex items-center gap-4">
                 <p className="text-sm text-[color:var(--accent)]">Alumnos: {generalRankingItems.length}</p>
@@ -2135,7 +2092,7 @@ export default function DocentePage() {
             ) : studentInviteModal.link ? (
               <div className="space-y-4">
                 <p className="text-sm text-[color:var(--muted)] leading-6">
-                  Comparte este link con tus alumnos. Al abrirlo podrán registrarse directamente en este grupo. El link es válido por 30 días.
+                  Comparte este link con tus alumnos. Al abrirlo podrán registrarse directamente en este proyecto. El link es válido por 30 días.
                 </p>
                 <div className="rounded-xl border border-white/10 bg-white/5 p-4 break-all font-mono text-xs text-[color:var(--foreground)]">
                   {studentInviteModal.link}
