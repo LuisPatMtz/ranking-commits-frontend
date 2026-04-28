@@ -14,7 +14,6 @@ import type {
   CommitListResponse,
   GroupRankingItem,
   GithubSyncResponse,
-  GroupRankingGradesUpdatePayload,
   GroupShareLinkResponse,
   GroupShareResponse,
   GroupStudent,
@@ -50,12 +49,7 @@ type MemberCommitsModalState = {
   username: string;
 } | null;
 
-type RankingDraftMap = Record<
-  number,
-  {
-    docente_grade: number;
-  }
->;
+type RankingDraftMap = Record<number, Record<string, never>>;
 
 type StudentInviteModal = {
   groupId: number;
@@ -67,7 +61,8 @@ type StudentInviteModal = {
 const initialGroupForm = {
   nombre: "",
   carrera: "",
-  semestre: "",
+  fecha_inicio: "",
+  fecha_cierre: "",
 };
 
 const initialStudentForm = {
@@ -222,7 +217,6 @@ export default function DocentePage() {
   }, [activeModal, cardMenuGroupId, isNotificationsOpen, memberCommitsModal, membersModal, rankingModal, shareModal, successModal, isGeneralRankingModalOpen, removeConfirmModal, studentInviteModal]);
 
   const availableCarreras = Array.from(new Set(groups.map((group) => group.carrera))).sort((a, b) => a.localeCompare(b));
-  const availableSemestres = Array.from(new Set(groups.map((group) => group.semestre))).sort((a, b) => a - b);
 
   const filteredGroups = useMemo(
     () =>
@@ -231,10 +225,9 @@ export default function DocentePage() {
           group.nombre.toLowerCase().includes(groupSearch.trim().toLowerCase()) ||
           group.carrera.toLowerCase().includes(groupSearch.trim().toLowerCase());
         const matchesCarrera = filterCarrera === "all" || group.carrera === filterCarrera;
-        const matchesSemestre = filterSemestre === "all" || String(group.semestre) === filterSemestre;
-        return matchesSearch && matchesCarrera && matchesSemestre;
+        return matchesSearch && matchesCarrera;
       }),
-    [filterCarrera, filterSemestre, groupSearch, groups],
+    [filterCarrera, groupSearch, groups],
   );
   const filteredGroupIdsKey = filteredGroups.map((group) => group.id).join(",");
   const generalMetricLabel =
@@ -254,7 +247,7 @@ export default function DocentePage() {
 
       setIsLoadingGroups(true);
       try {
-        const myGroups = await apiGet<Group[]>("/grupos", accessToken);
+        const myGroups = await apiGet<Group[]>("/proyectos", accessToken);
         setGroups(myGroups);
       } catch (error) {
         setFeedback(error instanceof ApiError ? error.detail : "No se pudieron cargar tus grupos.");
@@ -275,7 +268,7 @@ export default function DocentePage() {
 
       setIsLoadingInvites(true);
       try {
-        const invites = await apiGet<GroupInviteNotification[]>("/grupos/invitaciones/mias", accessToken);
+        const invites = await apiGet<GroupInviteNotification[]>("/proyectos/invitaciones/mias", accessToken);
         setInviteNotifications(invites);
       } catch {
         setInviteNotifications([]);
@@ -341,7 +334,7 @@ export default function DocentePage() {
   async function handleSubmitGroup(event: { preventDefault(): void }) {
     event.preventDefault();
     setIsSubmittingGroup(true);
-    setFeedback(editingGroup ? "Actualizando grupo..." : "Creando grupo...");
+    setFeedback(editingGroup ? "Actualizando proyecto..." : "Creando proyecto...");
 
     try {
       if (!accessToken) {
@@ -350,25 +343,27 @@ export default function DocentePage() {
       }
 
       const payload = {
-        ...groupForm,
-        semestre: Number(groupForm.semestre),
+        nombre: groupForm.nombre,
+        carrera: groupForm.carrera,
+        fecha_inicio: groupForm.fecha_inicio,
+        fecha_cierre: groupForm.fecha_cierre,
       };
 
       if (editingGroup) {
-        const updatedGroup = await apiPut<Group>(`/grupos/${editingGroup.id}`, payload, accessToken);
+        const updatedGroup = await apiPut<Group>(`/proyectos/${editingGroup.id}`, payload, accessToken);
         setGroups((current) => current.map((group) => (group.id === updatedGroup.id ? updatedGroup : group)));
-        setFeedback(`Grupo ${updatedGroup.nombre} actualizado correctamente.`);
+        setFeedback(`Proyecto ${updatedGroup.nombre} actualizado correctamente.`);
         setSuccessModal({
-          title: "Grupo actualizado",
-          message: `El grupo ${updatedGroup.nombre} se actualizo correctamente.`,
+          title: "Proyecto actualizado",
+          message: `El proyecto ${updatedGroup.nombre} se actualizo correctamente.`,
         });
       } else {
-        const createdGroup = await apiPost<Group>("/grupos", payload, accessToken);
+        const createdGroup = await apiPost<Group>("/proyectos", payload, accessToken);
         setGroups((current) => [createdGroup, ...current]);
-        setFeedback(`Grupo ${createdGroup.nombre} creado correctamente.`);
+        setFeedback(`Proyecto ${createdGroup.nombre} creado correctamente.`);
         setSuccessModal({
-          title: "Grupo creado",
-          message: `El grupo ${createdGroup.nombre} se registro correctamente con semestre ${createdGroup.semestre}.`,
+          title: "Proyecto creado",
+          message: `El proyecto ${createdGroup.nombre} se registro correctamente.`,
         });
       }
 
@@ -376,7 +371,7 @@ export default function DocentePage() {
       setEditingGroup(null);
       setActiveModal(null);
     } catch (error) {
-      setFeedback(error instanceof ApiError ? error.detail : "No se pudo guardar el grupo.");
+      setFeedback(error instanceof ApiError ? error.detail : "No se pudo guardar el proyecto.");
     } finally {
       setIsSubmittingGroup(false);
     }
@@ -393,7 +388,8 @@ export default function DocentePage() {
     setGroupForm({
       nombre: group.nombre,
       carrera: group.carrera,
-      semestre: String(group.semestre),
+      fecha_inicio: group.fecha_inicio.slice(0, 16),
+      fecha_cierre: group.fecha_cierre.slice(0, 16),
     });
     setCardMenuGroupId(null);
     setActiveModal("group");
@@ -404,7 +400,7 @@ export default function DocentePage() {
     setStudentInviteModal({ groupId: group.id, groupName: group.nombre, link: null, isLoading: true });
     try {
       const res = await apiPost<{ registro_url: string }>(
-        `/grupos/${group.id}/invitar-alumnos`,
+        `/proyectos/${group.id}/invitar-alumnos`,
         {},
         accessToken,
       );
@@ -554,7 +550,7 @@ export default function DocentePage() {
 
     setIsSearchingTargets(true);
     try {
-      const docentes = await apiGet<TeacherShareTarget[]>(`/grupos/docentes/buscar?q=${encodeURIComponent(query)}`, accessToken);
+      const docentes = await apiGet<TeacherShareTarget[]>(`/proyectos/docentes/buscar?q=${encodeURIComponent(query)}`, accessToken);
       setShareTargets(docentes);
       setSelectedShareTarget(null);
       if (docentes.length === 0) {
@@ -585,7 +581,7 @@ export default function DocentePage() {
 
     try {
       const result = await apiPost<GroupInviteCreatedResponse>(
-        `/grupos/${shareModal.groupId}/compartir`,
+        `/proyectos/${shareModal.groupId}/compartir`,
         { docente_id: selectedShareTarget.id },
         accessToken,
       );
@@ -614,7 +610,7 @@ export default function DocentePage() {
 
     setIsGeneratingShareLink(true);
     try {
-      const result = await apiPost<GroupShareLinkResponse>(`/grupos/${shareModal.groupId}/compartir/link`, {}, accessToken);
+      const result = await apiPost<GroupShareLinkResponse>(`/proyectos/${shareModal.groupId}/compartir/link`, {}, accessToken);
       const appOrigin = typeof window !== "undefined" ? window.location.origin : "";
       const link = `${appOrigin}${result.invite_link}`;
       setGeneratedShareLink(link);
@@ -667,17 +663,17 @@ export default function DocentePage() {
 
     setIsAcceptingShare(true);
     try {
-      const result = await apiPost<GroupShareResponse>(`/grupos/invitaciones/${encodeURIComponent(inviteCode)}/aceptar`, {}, accessToken);
-      const updatedGroups = await apiGet<Group[]>("/grupos", accessToken);
-      const updatedInvites = await apiGet<GroupInviteNotification[]>("/grupos/invitaciones/mias", accessToken);
+      const result = await apiPost<GroupShareResponse>(`/proyectos/invitaciones/${encodeURIComponent(inviteCode)}/aceptar`, {}, accessToken);
+      const updatedGroups = await apiGet<Group[]>("/proyectos", accessToken);
+      const updatedInvites = await apiGet<GroupInviteNotification[]>("/proyectos/invitaciones/mias", accessToken);
       setGroups(updatedGroups);
       setInviteNotifications(updatedInvites);
       setAcceptShareToken("");
       setSuccessModal({
-        title: "Grupo recibido",
-        message: `Recibiste una copia del grupo con ${result.copied_students} alumnos. Sin calificaciones ni proyectos.`,
+        title: "Proyecto recibido",
+        message: `Recibiste una copia del proyecto con ${result.copied_students} alumnos.`,
       });
-      setFeedback("Grupo recibido correctamente desde link.");
+      setFeedback("Proyecto recibido correctamente desde link.");
     } catch (error) {
       setFeedback(error instanceof ApiError ? error.detail : "No se pudo aceptar el link.");
     } finally {
@@ -693,14 +689,14 @@ export default function DocentePage() {
 
     setIsAcceptingShare(true);
     try {
-      const result = await apiPost<GroupShareResponse>(`/grupos/invitaciones/${encodeURIComponent(inviteCode)}/aceptar`, {}, accessToken);
-      const updatedGroups = await apiGet<Group[]>("/grupos", accessToken);
-      const updatedInvites = await apiGet<GroupInviteNotification[]>("/grupos/invitaciones/mias", accessToken);
+      const result = await apiPost<GroupShareResponse>(`/proyectos/invitaciones/${encodeURIComponent(inviteCode)}/aceptar`, {}, accessToken);
+      const updatedGroups = await apiGet<Group[]>("/proyectos", accessToken);
+      const updatedInvites = await apiGet<GroupInviteNotification[]>("/proyectos/invitaciones/mias", accessToken);
       setGroups(updatedGroups);
       setInviteNotifications(updatedInvites);
       setSuccessModal({
         title: "Invitacion aceptada",
-        message: `Se copio el grupo con ${result.copied_students} alumnos, sin calificaciones ni proyectos.`,
+        message: `Se copio el proyecto con ${result.copied_students} alumnos.`,
       });
       setFeedback("Invitacion aceptada correctamente.");
     } catch (error) {
@@ -712,8 +708,8 @@ export default function DocentePage() {
 
   async function loadGroupMembersContext(groupId: number, token: string) {
     const [members, candidates] = await Promise.all([
-      apiGet<GroupStudent[]>(`/grupos/${groupId}/alumnos`, token),
-      apiGet<GroupStudentCandidate[]>(`/grupos/${groupId}/alumnos/disponibles`, token),
+      apiGet<GroupStudent[]>(`/proyectos/${groupId}/alumnos`, token),
+      apiGet<GroupStudentCandidate[]>(`/proyectos/${groupId}/alumnos/disponibles`, token),
     ]);
     setGroupMembers(members);
     setCandidateStudents(candidates);
@@ -754,7 +750,7 @@ export default function DocentePage() {
     setIsSubmittingMemberChange(true);
     try {
       await apiPost<GroupStudent>(
-        `/grupos/${membersModal.groupId}/alumnos`,
+        `/proyectos/${membersModal.groupId}/alumnos`,
         { participant_id: Number(selectedCandidateParticipantId) },
         accessToken,
       );
@@ -779,7 +775,7 @@ export default function DocentePage() {
 
     setIsRemovingMember(true);
     try {
-      await apiDelete<{ message: string }>(`/grupos/${membersModal.groupId}/alumnos/participantes/${removeConfirmModal.participantId}`, accessToken);
+      await apiDelete<{ message: string }>(`/proyectos/${membersModal.groupId}/alumnos/participantes/${removeConfirmModal.participantId}`, accessToken);
       await loadGroupMembersContext(membersModal.groupId, accessToken);
       setFeedback("Competidor removido del grupo.");
       setRemoveConfirmModal(null);
@@ -836,16 +832,9 @@ export default function DocentePage() {
   }
 
   async function loadGroupRanking(groupId: number, token: string) {
-    const items = await apiGet<GroupRankingItem[]>(`/ranking/grupo/${groupId}?days=3650`, token);
+    const items = await apiGet<GroupRankingItem[]>(`/ranking/proyecto/${groupId}`, token);
     setRankingItems(items);
-    setRankingDrafts(
-      items.reduce<RankingDraftMap>((acc, item) => {
-        acc[item.usuario_id] = {
-          docente_grade: item.docente_grade,
-        };
-        return acc;
-      }, {}),
-    );
+    setRankingDrafts({});
   }
 
   async function openRankingModal(group: Group) {
@@ -866,45 +855,17 @@ export default function DocentePage() {
     }
   }
 
-  async function handleSaveDocenteGrade(item: GroupRankingItem, starClicked: number) {
-    if (!accessToken || !rankingModal) {
-      setFeedback("Tu sesion no es valida. Inicia sesion nuevamente.");
-      return;
-    }
-
-    const stars = Math.min(5, Math.max(0.5, Math.round(starClicked * 2) / 2));
-    const docente_grade = Math.round(stars * 20);
-
-    setRankingDrafts((current) => ({
-      ...current,
-      [item.usuario_id]: { ...current[item.usuario_id], docente_grade },
-    }));
-
-    const payload: GroupRankingGradesUpdatePayload = { usuario_id: item.usuario_id, docente_grade };
-
-    setIsSavingRankingGrades(item.usuario_id);
-    try {
-      await apiPut<{ message: string }>(`/ranking/grupo/${rankingModal.groupId}/calificaciones`, payload, accessToken);
-      await loadGroupRanking(rankingModal.groupId, accessToken);
-      setFeedback(`Nota docente actualizada para ${item.nombre}: ${docente_grade}/100`);
-    } catch (error) {
-      setFeedback(error instanceof ApiError ? error.detail : "No se pudo actualizar la calificacion.");
-    } finally {
-      setIsSavingRankingGrades(null);
-    }
-  }
-
   async function togglePeerVoting(group: Group) {
     setCardMenuGroupId(null);
     if (!accessToken) return;
     try {
-      const result = await apiPatch<{ grupo_id: number; peer_voting_enabled: boolean }>(
-        `/grupos/${group.id}/peer-voting`,
+      const result = await apiPatch<{ proyecto_id: number; peer_voting_enabled: boolean }>(
+        `/proyectos/${group.id}/peer-voting`,
         {},
         accessToken,
       );
       setGroups((current) =>
-        current.map((g) => (g.id === result.grupo_id ? { ...g, peer_voting_enabled: result.peer_voting_enabled } : g)),
+        current.map((g) => (g.id === result.proyecto_id ? { ...g, peer_voting_enabled: result.peer_voting_enabled } : g)),
       );
       setFeedback(`Votaciones ${result.peer_voting_enabled ? "activadas" : "desactivadas"} para ${group.nombre}`);
     } catch (error) {
@@ -923,7 +884,7 @@ export default function DocentePage() {
       let membersToSync: number[] = rankingItems.map((item) => item.usuario_id);
 
       if (membersToSync.length === 0) {
-        const members = await apiGet<GroupStudent[]>(`/grupos/${rankingModal.groupId}/alumnos`, accessToken);
+        const members = await apiGet<GroupStudent[]>(`/proyectos/${rankingModal.groupId}/alumnos`, accessToken);
         membersToSync = members.map((member) => member.usuario_id);
       }
 
@@ -988,7 +949,7 @@ export default function DocentePage() {
         className="rounded-sm bg-[color:var(--accent)] px-5 py-3 font-serif text-sm font-semibold text-[#1a1a16] transition hover:bg-[color:var(--accent-strong)]"
         onClick={() => openGroupCreateModal()}
       >
-        Nuevo grupo
+        Nuevo proyecto
       </button>
       <button
         type="button"
@@ -1012,22 +973,10 @@ export default function DocentePage() {
           <h3 className="font-serif text-2xl font-semibold text-[color:var(--foreground)]">Mis proyectos</h3>
           <p className="text-sm text-[color:var(--muted)]">Total: {filteredGroups.length}</p>
         </div>
-        <div className="mt-3 grid gap-3 md:grid-cols-[0.9fr_1.2fr_0.9fr_0.8fr]">
-          <select
-            className="rounded-xl border border-white/10 bg-white/6 px-4 py-3 text-sm text-white outline-none focus:border-[color:var(--accent)]/40"
-            value={filterSemestre}
-            onChange={(event) => setFilterSemestre(event.target.value)}
-          >
-            <option value="all" className="bg-[#1a1a16] text-white">Todos los semestres</option>
-            {availableSemestres.map((semestre) => (
-              <option key={semestre} value={String(semestre)} className="bg-[#1a1a16] text-white">
-                Semestre {semestre}
-              </option>
-            ))}
-          </select>
+        <div className="mt-3 grid gap-3 md:grid-cols-[1.4fr_0.9fr_0.8fr]">
           <input
             className="rounded-xl border border-white/10 bg-white/6 px-4 py-3 text-sm text-white outline-none placeholder:text-slate-500 focus:border-[color:var(--accent)]/40"
-            placeholder="Buscar grupo o carrera"
+            placeholder="Buscar proyecto o carrera"
             value={groupSearch}
             onChange={(event) => setGroupSearch(event.target.value)}
           />

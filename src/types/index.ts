@@ -13,7 +13,8 @@ export interface Group {
   id: number;
   nombre: string;
   carrera: string;
-  semestre: number;
+  fecha_inicio: string;
+  fecha_cierre: string;
   created_by_user_id?: number | null;
   peer_voting_enabled: boolean;
 }
@@ -52,7 +53,8 @@ export interface GroupInviteNotification {
   source_group_id: number;
   source_group_nombre: string;
   source_group_carrera: string;
-  source_group_semestre: number;
+  source_group_fecha_inicio: string;
+  source_group_fecha_cierre: string;
   invited_by_docente_id: number;
   invited_by_docente_username: string;
 }
@@ -124,7 +126,6 @@ export interface GroupRankingItem {
   github_username?: string | null;
   commits_count: number;
   commits_points: number;
-  docente_grade: number;
   streak_days: number;
   streak_points: number;
   peer_vote_avg: number;
@@ -132,17 +133,15 @@ export interface GroupRankingItem {
   promedio: number;
 }
 
-export interface GroupRankingGradesUpdatePayload {
-  usuario_id: number;
-  docente_grade?: number | null;
-}
-
 export interface VotoRecibidoOut {
   id: number;
   votante_id: number;
   votante_nombre: string;
-  estrellas: number;
-  periodo: string;
+}
+
+export interface ZenQuote {
+  q: string;
+  a: string;
 }
 
 export interface PeerVoteOut {
@@ -150,7 +149,6 @@ export interface PeerVoteOut {
   votado_id: number;
   votado_nombre: string;
   estrellas: number;
-  periodo: string;
 }
 
 export interface CompañeroVotable {
@@ -165,11 +163,14 @@ export interface MiPerfilAlumno {
   nombre: string;
   github_username?: string | null;
   github_contributions_total?: number | null;
-  grupo_id?: number | null;
-  grupo_nombre?: string | null;
+  proyecto_id?: number | null;
+  proyecto_nombre?: string | null;
   peer_voting_enabled: boolean;
   mi_rank?: number | null;
+  total_en_proyecto?: number | null;
   commits_count: number;
+  streak_days: number;
+  peer_vote_avg: number;
   promedio: number;
 }
 
@@ -184,10 +185,18 @@ export interface GeneralRankingItem {
   contributions_count: number;
   metric_value: number;
   metric_points: number;
-  docente_grade: number;
   streak_days: number;
   streak_points: number;
   total_score: number;
+}
+
+export interface GroupStudentInviteResponse {
+  message: string;
+  invite_token: string;
+  proyecto_id: number;
+  proyecto_nombre: string;
+  registro_url: string;
+  expires_in_days: number;
 }
 
 /** Alias para compatibilidad con ranking-table y ranking/page */
