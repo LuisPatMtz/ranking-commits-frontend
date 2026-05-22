@@ -1,24 +1,34 @@
 import { NextResponse } from "next/server";
 
-const FRASES_ES = [
-  { q: "El único modo de hacer un gran trabajo es amar lo que haces.", a: "Steve Jobs" },
-  { q: "El éxito es la suma de pequeños esfuerzos repetidos día tras día.", a: "Robert Collier" },
-  { q: "No cuentes los días, haz que los días cuenten.", a: "Muhammad Ali" },
-  { q: "La constancia es la virtud por la que todas las demás virtudes dan su fruto.", a: "Evelyn Waugh" },
+const FALLBACK = [
   { q: "Cada commit es un paso hacia donde quieres llegar.", a: "Ranking Commits" },
-  { q: "El código es como el humor: si tienes que explicarlo, es malo.", a: "Cory House" },
-  { q: "Primero, resuelve el problema. Luego, escribe el código.", a: "John Johnson" },
-  { q: "La mejor manera de predecir el futuro es crearlo.", a: "Peter Drucker" },
-  { q: "Los grandes logros requieren tiempo, dedicación y paciencia.", a: "Gail Devers" },
-  { q: "No te detengas cuando estés cansado, deténte cuando hayas terminado.", a: "Anónimo" },
-  { q: "El aprendizaje nunca cansa a la mente.", a: "Leonardo da Vinci" },
+  { q: "El único modo de hacer un gran trabajo es amar lo que haces.", a: "Steve Jobs" },
   { q: "La disciplina es el puente entre metas y logros.", a: "Jim Rohn" },
-  { q: "Un experto es alguien que ha cometido todos los errores posibles en un campo muy estrecho.", a: "Niels Bohr" },
-  { q: "El talento gana partidos, pero el trabajo en equipo gana campeonatos.", a: "Michael Jordan" },
-  { q: "Lo que no se puede medir no se puede mejorar.", a: "Peter Drucker" },
 ];
 
+async function translateToSpanish(text: string): Promise<string> {
+  const res = await fetch(
+    `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|es`,
+    { next: { revalidate: 86400 } },
+  );
+  if (!res.ok) throw new Error("MyMemory error");
+  const data = await res.json();
+  const translated: string = data.responseData?.translatedText;
+  if (!translated || data.responseStatus !== 200) throw new Error("Bad translation");
+  return translated;
+}
+
 export async function GET() {
-  const idx = Math.floor(Math.random() * FRASES_ES.length);
-  return NextResponse.json([FRASES_ES[idx]]);
+  try {
+    const zenRes = await fetch("https://zenquotes.io/api/random", {
+      next: { revalidate: 3600 },
+    });
+    if (!zenRes.ok) throw new Error(`ZenQuotes ${zenRes.status}`);
+    const [quote] = await zenRes.json();
+    const translatedQ = await translateToSpanish(quote.q);
+    return NextResponse.json([{ q: translatedQ, a: quote.a }]);
+  } catch {
+    const idx = Math.floor(Math.random() * FALLBACK.length);
+    return NextResponse.json([FALLBACK[idx]]);
+  }
 }

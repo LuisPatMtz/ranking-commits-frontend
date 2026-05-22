@@ -44,6 +44,7 @@ export default function AlumnoPage() {
   const [submitting, setSubmitting] = useState<Record<number, boolean>>({});
   const [voteError, setVoteError] = useState<string | null>(null);
   const [quote, setQuote] = useState<ZenQuote | null>(null);
+  const [joke, setJoke] = useState<ZenQuote | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<GithubSyncResponse | null>(null);
   const [syncError, setSyncError] = useState<string | null>(null);
@@ -61,12 +62,14 @@ export default function AlumnoPage() {
 
     async function load() {
       try {
-        const [p, zenRes] = await Promise.all([
+        const [p, zenRes, jokeRes] = await Promise.all([
           apiGet<MiPerfilAlumno>("/alumnos/mi-perfil", token!),
           fetch("/api/quote").then((r) => r.json()).catch(() => null),
+          fetch("/api/joke").then((r) => r.json()).catch(() => null),
         ]);
         setPerfil(p);
         if (Array.isArray(zenRes) && zenRes[0]) setQuote(zenRes[0] as ZenQuote);
+        if (Array.isArray(jokeRes) && jokeRes[0]) setJoke(jokeRes[0] as ZenQuote);
 
         if (p.proyecto_id && p.peer_voting_enabled) {
           const [comp, rec] = await Promise.all([
@@ -296,6 +299,15 @@ export default function AlumnoPage() {
                 ))}
               </ul>
             )}
+          </section>
+        )}
+
+        {/* Chiste del día */}
+        {joke && (
+          <section className="glass-panel rounded-[1.75rem] p-6">
+            <h2 className="mb-3 font-semibold text-[color:var(--accent)]">Chiste del día</h2>
+            <p className="text-sm text-[color:var(--foreground)]">{joke.q}</p>
+            <p className="mt-2 text-sm font-semibold text-[color:var(--accent)]">{joke.a}</p>
           </section>
         )}
 

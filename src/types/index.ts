@@ -13,6 +13,7 @@ export interface Group {
   id: number;
   nombre: string;
   carrera: string;
+  semestre?: string | null;
   fecha_inicio: string;
   fecha_cierre: string;
   created_by_user_id?: number | null;
@@ -53,6 +54,7 @@ export interface GroupInviteNotification {
   source_group_id: number;
   source_group_nombre: string;
   source_group_carrera: string;
+  source_group_semestre?: string | null;
   source_group_fecha_inicio: string;
   source_group_fecha_cierre: string;
   invited_by_docente_id: number;
@@ -116,6 +118,7 @@ export interface GithubSyncResponse {
   repos_nuevos: number;
   commits_nuevos: number;
   contribuciones_totales?: number | null;
+  streak_days?: number | null;
   since: string;
 }
 
@@ -187,6 +190,7 @@ export interface GeneralRankingItem {
   metric_points: number;
   streak_days: number;
   streak_points: number;
+  star_rating?: number | null;
   total_score: number;
 }
 

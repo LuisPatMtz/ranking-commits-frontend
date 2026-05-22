@@ -117,6 +117,7 @@ export default function DocentePage() {
   const [isLoadingRanking, setIsLoadingRanking] = useState(false);
   const [isLoadingGeneralRanking, setIsLoadingGeneralRanking] = useState(false);
   const [isRefreshingRanking, setIsRefreshingRanking] = useState(false);
+  const [syncProgress, setSyncProgress] = useState<{ current: number; total: number; currentName: string } | null>(null);
   const [groupSearch, setGroupSearch] = useState("");
   const [filterCarrera, setFilterCarrera] = useState("all");
   const [filterSemestre, setFilterSemestre] = useState("all");
@@ -875,30 +876,46 @@ export default function DocentePage() {
     }
 
     setIsRefreshingRanking(true);
+    setSyncProgress(null);
     try {
-      let membersToSync: number[] = rankingItems.map((item) => item.usuario_id);
+      type SyncTarget = { usuarioId: number; nombre: string; githubUsername: string | null | undefined };
+      let targets: SyncTarget[] = rankingItems
+        .filter((item) => item.usuario_id > 0)
+        .map((item) => ({ usuarioId: item.usuario_id, nombre: item.nombre, githubUsername: item.github_username }));
 
-      if (membersToSync.length === 0) {
+      if (targets.length === 0) {
         const members = await apiGet<GroupStudent[]>(`/proyectos/${rankingModal.groupId}/alumnos`, accessToken);
-        membersToSync = members.map((member) => member.usuario_id);
+        targets = members.map((m) => ({ usuarioId: m.usuario_id, nombre: m.nombre, githubUsername: m.github_username }));
       }
 
+      const total = targets.length;
       let syncedMembers = 0;
       let totalNewCommits = 0;
 
-      for (const usuarioId of membersToSync) {
+      for (let i = 0; i < targets.length; i++) {
+        const target = targets[i];
+        setSyncProgress({ current: i + 1, total, currentName: target.githubUsername ? `@${target.githubUsername}` : target.nombre });
         try {
-          const result = await apiPost<GithubSyncResponse>(`/github/sync/${usuarioId}?days=3650`, {}, accessToken);
+          const result = await apiPost<GithubSyncResponse>(`/github/sync/${target.usuarioId}?days=3650`, {}, accessToken);
           syncedMembers += 1;
           totalNewCommits += result.commits_nuevos;
+          setRankingItems((prev) =>
+            prev.map((item) =>
+              item.usuario_id === target.usuarioId
+                ? { ...item, commits_count: item.commits_count + result.commits_nuevos }
+                : item,
+            ),
+          );
         } catch {
           // Skip users without GitHub username or with GitHub API errors.
         }
       }
 
+      setSyncProgress(null);
       await loadGroupRanking(rankingModal.groupId, accessToken);
       setFeedback(`Refrescado: ${syncedMembers} alumnos sincronizados, ${totalNewCommits} commits nuevos.`);
     } catch (error) {
+      setSyncProgress(null);
       setFeedback(error instanceof ApiError ? error.detail : "No se pudo refrescar el ranking.");
     } finally {
       setIsRefreshingRanking(false);
@@ -1817,11 +1834,11 @@ export default function DocentePage() {
               <div className="flex gap-2">
                 <button
                   type="button"
-                  className="rounded-full border border-white/15 bg-white/5 px-4 py-2 text-xs font-semibold text-white transition hover:border-[color:var(--accent)]/50 hover:bg-white/10"
+                  className="rounded-full border border-white/15 bg-white/5 px-4 py-2 text-xs font-semibold text-white transition hover:border-[color:var(--accent)]/50 hover:bg-white/10 disabled:opacity-50"
                   onClick={() => void handleRefreshRankingWithSync()}
                   disabled={isLoadingRanking || isRefreshingRanking}
                 >
-                  {isRefreshingRanking ? "Sincronizando..." : isLoadingRanking ? "Cargando..." : "Refrescar"}
+                  {isLoadingRanking ? "Cargando..." : "Refrescar"}
                 </button>
                 <button
                   type="button"
@@ -1832,6 +1849,21 @@ export default function DocentePage() {
                 </button>
               </div>
             </div>
+
+            {syncProgress ? (
+              <div className="mt-4 shrink-0 space-y-2">
+                <div className="flex items-center justify-between text-xs text-[color:var(--muted)]">
+                  <span>Sincronizando {syncProgress.currentName}...</span>
+                  <span>{syncProgress.current} / {syncProgress.total}</span>
+                </div>
+                <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+                  <div
+                    className="h-full rounded-full bg-[color:var(--accent)] transition-all duration-500"
+                    style={{ width: `${(syncProgress.current / syncProgress.total) * 100}%` }}
+                  />
+                </div>
+              </div>
+            ) : null}
 
             {isLoadingRanking ? (
               <p className="mt-5 text-sm text-[color:var(--muted)]">Cargando ranking...</p>
@@ -2054,7 +2086,7 @@ export default function DocentePage() {
                         </td>
                         <td className="px-4 py-3">
                           <span className="inline-flex items-center gap-1 text-amber-400">
-                            ★ {item.star_rating > 0 ? item.star_rating.toFixed(1) : "—"}
+                            ★ {(item.star_rating ?? 0) > 0 ? (item.star_rating as number).toFixed(1) : "—"}
                           </span>
                         </td>
                         <td className="px-4 py-3 font-semibold">{item.total_score.toFixed(2)}</td>
